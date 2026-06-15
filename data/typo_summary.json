@@ -1,0 +1,57 @@
+{
+  "0": {
+    "count": 26,
+    "avg_area_sqm": 691.0,
+    "avg_openness": 0.909,
+    "avg_shade": 0.82,
+    "avg_connectivity": 0.089,
+    "avg_enclosure": 0.157,
+    "avg_flatness": 0.0,
+    "center_lon": 103.85378,
+    "center_lat": 1.31123
+  },
+  "1": {
+    "count": 75,
+    "avg_area_sqm": 76.7,
+    "avg_openness": 0.0,
+    "avg_shade": 0.0,
+    "avg_connectivity": 0.0,
+    "avg_enclosure": 0.439,
+    "avg_flatness": 1.0,
+    "center_lon": 103.85425,
+    "center_lat": 1.30762
+  },
+  "2": {
+    "count": 34,
+    "avg_area_sqm": 530.6,
+    "avg_openness": 0.0,
+    "avg_shade": 0.0,
+    "avg_connectivity": 0.0,
+    "avg_enclosure": 0.162,
+    "avg_flatness": 1.0,
+    "center_lon": 103.8545,
+    "center_lat": 1.30738
+  },
+  "3": {
+    "count": 34,
+    "avg_area_sqm": 2155.0,
+    "avg_openness": 0.99,
+    "avg_shade": 0.572,
+    "avg_connectivity": 0.062,
+    "avg_enclosure": 0.072,
+    "avg_flatness": 0.0,
+    "center_lon": 103.85617,
+    "center_lat": 1.30673
+  },
+  "4": {
+    "count": 16,
+    "avg_area_sqm": 444.2,
+    "avg_openness": 0.847,
+    "avg_shade": 0.244,
+    "avg_connectivity": 0.051,
+    "avg_enclosure": 0.329,
+    "avg_flatness": 0.0,
+    "center_lon": 103.85459,
+    "center_lat": 1.30659
+  }
+}

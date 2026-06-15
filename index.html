@@ -1,0 +1,1581 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/>
+<meta name="description" content="EventSeek — An Urban Search Engine for Matching Events and Spatial Conditions. Discover Jalan Besar spaces matched to your event idea."/>
+<meta property="og:title" content="EventSeek — Urban Event Matcher"/>
+<meta property="og:description" content="Type an event. Discover your match. Explore Jalan Besar's leftover spaces."/>
+<meta property="og:type" content="website"/>
+<title>EventSeek — Urban Event Matcher</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+<style>
+/* ============================================================
+   EVENTSEEK — Production v1
+   Urban Search Engine for Matching Events & Spatial Conditions
+   NUS Architecture · AR5802 · Lin Zhiyi · 2026
+   ============================================================ */
+
+/* --- RESET ------------------------------------------------- */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth;-webkit-overflow-scrolling:touch;-webkit-text-size-adjust:100%}
+body{
+  font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  background:#F5F2EE;color:#1A1A1A;line-height:1.5;
+  -webkit-font-smoothing:antialiased;overflow-x:hidden;
+}
+.container{max-width:430px;margin:0 auto;min-height:100vh;position:relative;overflow-x:hidden;background:#FAF8F5;box-shadow:0 0 60px rgba(0,0,0,.06)}
+
+/* --- TYPOGRAPHY ------------------------------------------- */
+.serif{font-family:"Georgia","Noto Serif","Times New Roman",ui-serif,serif}
+h1{font-family:"Georgia","Noto Serif",ui-serif,serif;font-size:1.75rem;font-weight:700;line-height:1.15;letter-spacing:-.02em}
+h2{font-family:"Georgia","Noto Serif",ui-serif,serif;font-size:1.35rem;font-weight:700;line-height:1.2;letter-spacing:-.01em}
+h3{font-size:1.05rem;font-weight:600;line-height:1.3}
+.subtle{font-size:.9375rem;color:#6B6560;line-height:1.5}
+.eyebrow{font-size:.6875rem;text-transform:uppercase;letter-spacing:.1em;color:#9C948E;font-weight:600}
+
+/* --- SCREENS ---------------------------------------------- */
+.screen{display:none;min-height:100vh;padding:16px 18px 48px;position:relative}
+.screen.on{display:block;animation:fadeUp .35s cubic-bezier(.22,.61,.36,1)}
+@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+@keyframes fadeOut{from{opacity:1}to{opacity:0}}
+@keyframes slideUp{from{opacity:0;transform:translateY(32px)}to{opacity:1;transform:translateY(0)}}
+@keyframes slideIn{from{opacity:0;transform:translateX(-16px)}to{opacity:1;transform:translateX(0)}}
+@keyframes popIn{0%{transform:scale(.6);opacity:0}70%{transform:scale(1.05);opacity:1}100%{transform:scale(1);opacity:1}}
+@keyframes breathe{0%,100%{opacity:.5}50%{opacity:1}}
+@keyframes blink{0%,100%{opacity:.2}50%{opacity:1}}
+
+/* --- TOP BAR ---------------------------------------------- */
+.topbar{display:flex;justify-content:space-between;align-items:center;padding:10px 0;margin-bottom:8px;border-bottom:1px solid #E8E3DE}
+.logo-link{font-weight:700;font-size:.9375rem;color:#1A1A1A;text-decoration:none;letter-spacing:-.02em}
+.logo-link i{color:#E8A840;font-style:normal}
+.topbar nav{display:flex;gap:14px}
+.topbar nav a{font-size:.75rem;color:#6B6560;text-decoration:none;transition:color .2s}
+.topbar nav a:active{color:#1A1A1A}
+
+/* --- BUTTONS ---------------------------------------------- */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:11px 22px;border-radius:12px;font-size:.875rem;font-weight:600;cursor:pointer;transition:all .2s;border:none;text-decoration:none;text-align:center;font-family:inherit;white-space:nowrap;-webkit-tap-highlight-color:transparent}
+.btn:active{transform:scale(.97)}
+.btn-dark{background:#1A1A1A;color:#FAF8F5}
+.btn-dark:active{background:#3D3D3D}
+.btn-outline{background:transparent;color:#1A1A1A;border:1.5px solid #D4CFC9}
+.btn-outline:active{background:#F5F2EE}
+.btn-teal{background:#0D9488;color:#fff}
+.btn-teal:active{background:#0F766E}
+.btn-sm{padding:7px 14px;font-size:.75rem;border-radius:8px}
+.btn-block{width:100%}
+
+/* ============================================================
+   LANDING — Search-First
+   ============================================================ */
+.search-hero{text-align:center;padding:12px 0 4px}
+.search-box{position:relative;margin:16px auto 0;max-width:100%}
+.search-field{
+  display:flex;align-items:center;gap:0;background:#fff;
+  border:2px solid #D4CFC9;border-radius:16px;padding:0 14px;
+  transition:all .25s;box-shadow:0 2px 8px rgba(0,0,0,.03)
+}
+.search-field:focus-within{border-color:#1A1A1A;box-shadow:0 4px 20px rgba(0,0,0,.06)}
+.search-field .s-icon{font-size:1.125rem;color:#9C948E;transition:color .25s;flex-shrink:0}
+.search-field:focus-within .s-icon{color:#1A1A1A}
+.search-field input{
+  flex:1;border:none;outline:none;background:transparent;
+  font-size:1rem;padding:15px 0 15px 10px;color:#1A1A1A;font-family:inherit;min-width:0
+}
+.search-field input::placeholder{color:#B8B0A8}
+.search-clear{background:none;border:none;font-size:1rem;color:#9C948E;cursor:pointer;padding:4px 6px;display:none;border-radius:50%;transition:all .2s;line-height:1}
+.search-clear.show{display:block}
+.search-clear:active{background:#EDE9E4;color:#1A1A1A}
+.search-go{background:#1A1A1A;color:#FAF8F5;border:none;padding:9px 16px;border-radius:10px;font-size:.8125rem;font-weight:600;cursor:pointer;transition:all .2s;font-family:inherit;margin:3px 0 3px 6px;white-space:nowrap}
+.search-go:active{background:#3D3D3D;transform:scale(.96)}
+
+/* Suggestions dropdown */
+.search-drop{
+  display:none;position:absolute;top:calc(100% + 4px);left:0;right:0;z-index:20;
+  background:#fff;border:1.5px solid #E8E3DE;border-radius:14px;overflow:hidden;
+  box-shadow:0 12px 32px rgba(0,0,0,.07)
+}
+.search-drop.open{display:block;animation:fadeUp .18s cubic-bezier(.22,.61,.36,1)}
+.search-drop-item{
+  display:flex;align-items:center;gap:10px;padding:13px 14px;
+  cursor:pointer;transition:background .12s;border-bottom:1px solid #F5F2EE
+}
+.search-drop-item:last-child{border-bottom:none}
+.search-drop-item:active,.search-drop-item.focus{background:#F7F5F1}
+.search-drop-item:focus-visible{outline:2px solid #0D9488;outline-offset:-2px;border-radius:6px}
+.search-drop-item .sd-icon{font-size:1.125rem;flex-shrink:0}
+.search-drop-item .sd-text{flex:1}
+.search-drop-item .sd-name{font-weight:600;font-size:.875rem}
+.search-drop-item .sd-hint{font-size:.6875rem;color:#9C948E}
+.search-drop-item .sd-arrow{color:#D4CFC9;font-size:.75rem}
+
+/* Chips */
+.chips{display:flex;flex-wrap:wrap;gap:7px;justify-content:center;margin-top:14px}
+.chip{display:inline-flex;align-items:center;gap:5px;padding:7px 14px;border-radius:999px;font-size:.75rem;font-weight:500;background:#fff;border:1.5px solid #E8E3DE;color:#3D3D3D;cursor:pointer;transition:all .2s;white-space:nowrap;user-select:none;-webkit-tap-highlight-color:transparent}
+.chip:active{background:#F0EDE9;border-color:#D4CFC9;transform:scale(.96)}
+.chip:focus-visible{outline:2px solid #0D9488;outline-offset:2px}
+.chip .chip-emoji{font-size:.875rem}
+
+/* Divider */
+.divider{display:flex;align-items:center;gap:10px;margin:22px 0 14px;color:#B8B0A8;font-size:.6875rem;text-transform:uppercase;letter-spacing:.06em}
+.divider::before,.divider::after{content:'';flex:1;height:1px;background:#E8E3DE}
+
+/* Event cards grid */
+.card-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:2px}
+.card-grid.col4{grid-template-columns:repeat(4,1fr);gap:10px}
+.event-card{
+  background:#fff;border:1.5px solid #E8E3DE;border-radius:14px;padding:14px 10px;
+  cursor:pointer;transition:all .22s;display:flex;flex-direction:column;align-items:center;gap:6px;
+  user-select:none;-webkit-tap-highlight-color:transparent
+}
+.event-card:active{transform:scale(.97);background:#FBF9F7}
+.event-card:focus-visible{outline:2px solid #0D9488;outline-offset:3px;border-radius:16px}
+.event-card .ec-icon{font-size:1.75rem;line-height:1}
+.event-card .ec-label{font-size:.75rem;font-weight:600;text-align:center;line-height:1.2}
+.event-card .ec-hint{font-size:.625rem;color:#9C948E;text-align:center;line-height:1.15}
+.event-card.chosen{border-color:#0D9488;background:#F0FDF9;box-shadow:0 0 0 3px rgba(13,148,136,.1)}
+.event-card.dim{opacity:.25;pointer-events:none}
+
+/* ============================================================
+   SEARCHING OVERLAY
+   ============================================================ */
+.searching-overlay{
+  display:none;position:fixed;inset:0;background:rgba(26,26,26,.93);
+  z-index:200;flex-direction:column;align-items:center;justify-content:center;
+  backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)
+}
+.searching-overlay.on{display:flex;animation:fadeIn .2s}
+.searching-overlay.out{animation:fadeOut .35s forwards}
+.searching-inner{max-width:300px;width:82%;text-align:center}
+.searching-inner .si-title{
+  color:#FAF8F5;font-family:"Georgia","Noto Serif",ui-serif,serif;
+  font-size:1.15rem;font-weight:700;margin-bottom:28px
+}
+.si-stages{display:flex;flex-direction:column;gap:0}
+.si-stage{
+  display:flex;align-items:center;gap:12px;padding:12px 0;
+  opacity:0;transform:translateY(6px);
+  transition:opacity .3s,transform .3s;border-bottom:1px solid rgba(255,255,255,.05)
+}
+.si-stage.show{opacity:1;transform:translateY(0)}
+.si-stage .si-bullet{
+  width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+  flex-shrink:0;font-size:.75rem;border:2px solid rgba(255,255,255,.18);color:transparent;
+  transition:all .3s
+}
+.si-stage.active .si-bullet{border-color:#E8A840;background:rgba(232,168,64,.1)}
+.si-stage.done .si-bullet{border-color:#0D9488;background:#0D9488;color:#fff;animation:popIn .3s}
+.si-stage .si-text{font-size:.875rem;color:rgba(255,255,255,.35);transition:color .3s}
+.si-stage.active .si-text{color:rgba(255,255,255,.85)}
+.si-stage.done .si-text{color:rgba(255,255,255,.55)}
+.si-dots{display:flex;gap:3px;margin-left:auto}
+.si-dots span{width:4px;height:4px;border-radius:50%;background:rgba(255,255,255,.18);animation:blink .8s infinite}
+.si-dots span:nth-child(2){animation-delay:.15s}
+.si-dots span:nth-child(3){animation-delay:.3s}
+.si-stage.done .si-dots{display:none}
+.si-stage .si-check{display:none;color:#0D9488;font-size:.75rem;margin-left:auto}
+.si-stage.done .si-check{display:block}
+.si-progress-wrap{margin-top:28px;width:100%;max-width:260px}
+.si-progress-track{height:3px;background:rgba(255,255,255,.08);border-radius:999px;overflow:hidden}
+.si-progress-fill{height:100%;background:linear-gradient(90deg,#E8A840,#0D9488);border-radius:999px;width:0%;transition:width .35s}
+
+/* ============================================================
+   MATCH REVEAL
+   ============================================================ */
+.match-block{text-align:center;padding:20px 0}
+.match-tag{display:inline-block;padding:5px 12px;border-radius:999px;font-size:.75rem;font-weight:600;color:#6B6560;background:#F5F2EE;margin-bottom:14px}
+.match-typo-card{
+  background:#fff;border:2px solid #E8E3DE;border-radius:18px;padding:22px 18px;margin:14px 0;
+  animation:slideUp .5s cubic-bezier(.22,.61,.36,1)
+}
+.match-typo-card .mt-name{font-size:1.5rem;font-weight:700;letter-spacing:-.02em}
+.typo-dot{display:inline-block;width:11px;height:11px;border-radius:50%;margin-right:6px;vertical-align:middle}
+/* Search source annotation */
+.search-source-note{font-size:.7rem;color:#9C948E;margin-top:6px;margin-bottom:2px;font-style:italic}
+.search-source-note strong{color:#0D9488;font-style:normal}
+
+/* Score bar */
+.score-wrap{margin:18px 0}
+.score-row{display:flex;justify-content:space-between;font-size:.75rem;color:#6B6560;margin-bottom:5px}
+.score-row .sc-pct{font-weight:700;color:#0D9488;font-size:1rem}
+.score-track{height:7px;background:#E8E3DE;border-radius:999px;overflow:hidden}
+.score-fill{height:100%;background:#0D9488;border-radius:999px;width:0;transition:width 1s cubic-bezier(.65,0,.35,1)}
+.score-fill.go{width:var(--s)}
+
+/* Reason items */
+.reason-list{display:flex;flex-direction:column;gap:7px;margin-top:14px}
+.reason-item{
+  display:flex;align-items:flex-start;gap:10px;padding:11px 12px;
+  background:#fff;border:1px solid #E8E3DE;border-radius:11px;
+  font-size:.8125rem;line-height:1.35;animation:slideIn .35s both
+}
+.reason-item:nth-child(1){animation-delay:.08s}
+.reason-item:nth-child(2){animation-delay:.16s}
+.reason-item:nth-child(3){animation-delay:.24s}
+.reason-item:nth-child(4){animation-delay:.32s}
+.reason-item .ri-icon{font-size:1.125rem;flex-shrink:0;width:28px;text-align:center}
+.reason-item .ri-text strong{display:block;margin-bottom:1px}
+
+/* Secondary matches */
+.sec-matches{display:flex;gap:7px;margin-top:10px;flex-wrap:wrap}
+.sec-match{padding:7px 12px;border-radius:999px;font-size:.75rem;font-weight:500;border:1.5px solid #E8E3DE;background:#fff}
+.sec-match .pct{font-weight:700}
+
+/* ============================================================
+   SPATIAL FACTORS
+   ============================================================ */
+.factor-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:14px}
+.factor-card{
+  background:#fff;border:1px solid #E8E3DE;border-radius:13px;padding:15px 12px;
+  text-align:center;animation:slideUp .45s both
+}
+.factor-card:nth-child(1){animation-delay:.06s}
+.factor-card:nth-child(2){animation-delay:.14s}
+.factor-card:nth-child(3){animation-delay:.22s}
+.factor-card:nth-child(4){animation-delay:.30s}
+.factor-card .fc-icon{font-size:1.75rem;margin-bottom:6px}
+.factor-card .fc-name{font-weight:700;font-size:.875rem;margin-bottom:3px}
+.factor-card .fc-desc{font-size:.75rem;color:#6B6560;line-height:1.35}
+
+/* ============================================================
+   MAP
+   ============================================================ */
+.map-wrap{border-radius:16px;overflow:hidden;margin:14px 0;border:1px solid #D4CFC9;height:320px;position:relative;background:#e8e3dc}
+.map-wrap .leaflet-container{height:100%;width:100%;border-radius:15px}
+/* Counter badge — floating top-left overlay */
+.map-counter-badge{
+  position:absolute;top:10px;left:10px;z-index:1000;
+  background:rgba(26,26,26,.88);color:#FAF8F5;border-radius:10px;
+  padding:6px 12px;font-size:.6875rem;font-weight:600;
+  box-shadow:0 2px 10px rgba(0,0,0,.15);
+  display:flex;flex-direction:column;align-items:center;gap:1px;
+  transition:background .5s,box-shadow .5s;
+  pointer-events:none;
+}
+.map-counter-badge .mcb-num{
+  font-size:1.15rem;font-weight:700;line-height:1;
+  font-family:"Georgia","Noto Serif",ui-serif,serif;
+  transition:color .4s;
+}
+.map-counter-badge .mcb-label{
+  font-size:.5625rem;font-weight:400;color:rgba(250,248,245,.7);
+  letter-spacing:.04em;text-transform:uppercase;text-align:center;line-height:1.2;
+}
+.map-counter-badge.level2{background:rgba(13,148,136,.9)}
+.map-counter-badge.level3{background:rgba(13,148,136,.95);box-shadow:0 2px 16px rgba(13,148,136,.3)}
+/* Permanent label for representative exemplars */
+.exemplar-label{
+  background:rgba(26,26,26,.82);color:#FAF8F5;border:none;
+  border-radius:6px;padding:3px 8px;font-size:.625rem;
+  font-family:system-ui,-apple-system,sans-serif;white-space:nowrap;
+  box-shadow:0 1px 4px rgba(0,0,0,.2)
+}
+.exemplar-label::before{border-top-color:rgba(26,26,26,.82)}
+/* Override Leaflet styles for warm aesthetic */
+.leaflet-control-zoom a{background:#fff!important;color:#3D3D3D!important;border:1px solid #D4CFC9!important;border-radius:8px!important}
+.leaflet-control-zoom a:hover{background:#F5F2EE!important}
+.leaflet-popup-content-wrapper{border-radius:12px!important;box-shadow:0 8px 24px rgba(0,0,0,.1)!important;font-family:inherit!important}
+.leaflet-popup-content{font-size:.8125rem!important;margin:10px 14px!important;line-height:1.4!important}
+.plot-popup strong{display:block;font-size:.875rem;margin-bottom:2px}
+.plot-popup .pp-typo{font-size:.75rem;color:#6B6560;margin-bottom:4px}
+.plot-popup .pp-metrics{font-size:.6875rem;color:#9C948E}
+.legend-box{
+  position:absolute;bottom:12px;right:12px;z-index:1000;
+  background:rgba(255,255,255,.92);border-radius:10px;padding:8px 10px;
+  font-size:.625rem;box-shadow:0 2px 8px rgba(0,0,0,.06);border:1px solid #E8E3DE;
+  display:flex;flex-direction:column;gap:3px
+}
+.legend-box .lg-row{display:flex;align-items:center;gap:5px}
+.legend-box .lg-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+
+/* Location detail panel */
+.loc-panel{background:#fff;border:1px solid #E8E3DE;border-radius:14px;overflow:hidden;margin-top:10px}
+.loc-panel .lp-photo{height:130px;background:#D4CFC9;display:flex;align-items:center;justify-content:center;font-size:.75rem;color:#9C948E}
+.loc-panel .lp-info{padding:13px 15px}
+.loc-panel .lp-name{font-weight:700;font-size:.875rem;margin-bottom:3px}
+.loc-panel .lp-why{font-size:.75rem;color:#6B6560;margin-bottom:6px}
+.loc-tags{display:flex;gap:5px;flex-wrap:wrap}
+.loc-tag{padding:2px 8px;border-radius:999px;font-size:.625rem;font-weight:500;background:#F5F2EE;color:#6B6560}
+
+/* ============================================================
+   USER TYPES
+   ============================================================ */
+.user-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:14px}
+.user-card{
+  background:#fff;border:1.5px solid #E8E3DE;border-radius:13px;
+  padding:14px 12px;text-align:center;transition:all .25s
+}
+.user-card.primary{border-color:#0D9488;background:#F0FDF9;box-shadow:0 0 0 2px rgba(13,148,136,.08)}
+.user-card .uc-icon{font-size:1.5rem;margin-bottom:4px}
+.user-card .uc-name{font-weight:700;font-size:.75rem;margin-bottom:2px}
+.user-card .uc-events{font-size:.625rem;color:#6B6560;line-height:1.25}
+.user-card .uc-tag{
+  display:inline-block;padding:2px 7px;border-radius:999px;
+  font-size:.5625rem;font-weight:600;background:#0D9488;color:#fff;margin-top:3px
+}
+
+/* ============================================================
+   BEHAVIOUR CARDS
+   ============================================================ */
+.behave-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:14px}
+.behave-card{
+  background:#fff;border:1.5px solid #E8E3DE;border-radius:13px;padding:14px 10px;
+  text-align:center;transition:all .25s
+}
+.behave-card.on{border-color:#0D9488;background:#F0FDF9}
+.behave-card .bc-icon{font-size:1.75rem;margin-bottom:4px}
+.behave-card .bc-name{font-weight:700;font-size:.875rem;margin-bottom:1px}
+.behave-card .bc-tag{font-size:.625rem;color:#9C948E;font-style:italic}
+.behave-card .bc-desc{font-size:.6875rem;color:#6B6560;line-height:1.25;margin-top:4px}
+
+/* ============================================================
+   PIPELINE
+   ============================================================ */
+.pipeline{margin:18px 0}
+.pipe-step{display:flex;align-items:flex-start;gap:12px;padding:14px 0;border-bottom:1px solid #E8E3DE;animation:slideIn .35s both}
+.pipe-step:nth-child(1){animation-delay:0s}
+.pipe-step:nth-child(2){animation-delay:.07s}
+.pipe-step:nth-child(3){animation-delay:.14s}
+.pipe-step:nth-child(4){animation-delay:.21s}
+.pipe-step:nth-child(5){animation-delay:.28s}
+.pipe-step:nth-child(6){animation-delay:.35s}
+.pipe-step:nth-child(7){animation-delay:.42s}
+.pipe-step:last-child{border-bottom:none}
+.pipe-step .ps-num{
+  width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+  font-size:.75rem;font-weight:700;flex-shrink:0;background:#1A1A1A;color:#fff
+}
+.pipe-step .ps-text h4{font-size:.875rem;font-weight:600;margin-bottom:1px}
+.pipe-step .ps-text p{font-size:.75rem;color:#6B6560;line-height:1.35}
+
+/* ============================================================
+   SHARE CARD
+   ============================================================ */
+.share-overlay{
+  display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);
+  z-index:100;align-items:center;justify-content:center;
+  backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px)
+}
+.share-overlay.open{display:flex;animation:fadeIn .25s}
+.share-card{
+  background:#fff;border-radius:18px;padding:22px;max-width:300px;width:88%;
+  box-shadow:0 16px 48px rgba(0,0,0,.12);text-align:center;animation:slideUp .45s
+}
+.share-card .sc-logo{font-weight:700;font-size:1rem;margin-bottom:10px}
+.share-card .sc-logo i{color:#E8A840;font-style:normal}
+.share-card .sc-event{font-size:1.125rem;font-weight:700;margin-bottom:2px}
+.share-card .sc-match{font-size:1rem;color:#6B6560;margin-bottom:10px}
+.share-card .sc-badge{display:inline-block;padding:7px 18px;background:#0D9488;color:#fff;border-radius:999px;font-size:1.35rem;font-weight:700;margin-bottom:14px}
+.share-card .sc-reasons{text-align:left;margin-bottom:14px}
+.share-card .sc-reason{font-size:.75rem;color:#6B6560;padding:3px 0 3px 14px;position:relative}
+.share-card .sc-reason::before{content:'\2726';position:absolute;left:0;color:#E8A840;font-size:.5625rem;top:6px}
+.share-card .sc-qr{width:72px;height:72px;background:#F5F2EE;border-radius:8px;margin:10px auto;display:flex;align-items:center;justify-content:center;font-size:.625rem;color:#9C948E}
+.sc-actions{display:flex;gap:7px;margin-top:14px}
+.sc-actions .btn{flex:1;font-size:.75rem;padding:9px}
+
+/* ============================================================
+   TYPOGRAPHY COLORS
+   ============================================================ */
+.c-golden{color:#E8618C}.bg-golden{background:#E8618C}
+.c-micro{color:#2563EB}.bg-micro{background:#2563EB}
+.c-cutoff{color:#59A87E}.bg-cutoff{background:#59A87E}
+.c-highflow{color:#E8A840}.bg-highflow{background:#E8A840}
+.c-irregular{color:#3D3D3D}.bg-irregular{background:#3D3D3D}
+
+/* --- UTILITY ---------------------------------------------- */
+.tc{text-align:center}
+.mt-2{margin-top:2px}.mt-4{margin-top:4px}.mt-6{margin-top:6px}.mt-8{margin-top:8px}.mt-10{margin-top:10px}.mt-12{margin-top:12px}.mt-14{margin-top:14px}.mt-16{margin-top:16px}.mt-18{margin-top:18px}.mt-20{margin-top:20px}.mt-24{margin-top:24px}.mt-28{margin-top:28px}
+.mb-4{margin-bottom:4px}.mb-8{margin-bottom:8px}.mb-12{margin-bottom:12px}.mb-16{margin-bottom:16px}
+.gap-8{gap:8px}.gap-10{gap:10px}
+.flex-wrap{flex-wrap:wrap}.flex-center{justify-content:center}
+.back-row{display:flex;align-items:center;gap:6px;padding:6px 0}
+.back-btn{background:none;border:none;font-size:.8125rem;color:#6B6560;cursor:pointer;padding:4px 6px;border-radius:6px;font-family:inherit}
+.back-btn:active{color:#1A1A1A}
+.back-btn:focus-visible,.topbar nav a:focus-visible{outline:2px solid #0D9488;outline-offset:3px;border-radius:6px}
+.btn:focus-visible{outline:2px solid #0D9488;outline-offset:3px}
+.site-footer{
+  text-align:center;padding:20px 0;border-top:1px solid #E8E3DE;
+  font-size:.6875rem;color:#9C948E;line-height:1.5
+}
+.prototype-badge{
+  text-align:center;padding:6px;margin-top:12px;
+  font-size:.625rem;color:#B8B0A8;letter-spacing:.04em
+}
+
+@media(prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}
+}
+@media(min-width:431px){
+  .card-grid{grid-template-columns:repeat(4,1fr);gap:9px}
+  .user-grid{grid-template-columns:repeat(3,1fr)}
+}
+</style>
+</head>
+<body>
+
+<noscript><div style="max-width:430px;margin:0 auto;padding:40px 18px;text-align:center;font-family:system-ui,sans-serif"><h2>EventSeek requires JavaScript</h2><p style="color:#6B6560;margin-top:12px">Please enable JavaScript to use the urban event matcher.</p></div></noscript>
+<div class="container" id="app">
+
+<!-- ============================================================
+     SCREEN 0 — LANDING (Search-First)
+     ============================================================ -->
+<section class="screen on" id="scr-landing">
+  <header class="topbar">
+    <a href="#" class="logo-link" onclick="nav('scr-landing')">Event<i>Seek</i> &middot;</a>
+    <nav>
+      <a href="#" onclick="nav('scr-pipeline')">How</a>
+      <a href="#" onclick="nav('scr-implications')">About</a>
+    </nav>
+  </header>
+
+  <div class="search-hero">
+    <span class="eyebrow">Urban Search Engine</span>
+    <h1 class="mt-4">Type an Event</h1>
+    <p class="subtle mt-4">Discover Jalan Besar spaces matched to your idea</p>
+
+    <form class="search-box" id="searchBox" onsubmit="event.preventDefault();submitSearch()" role="search" aria-label="Search for an event">
+      <div class="search-field" id="searchField">
+        <span class="s-icon">&#128269;</span>
+        <input type="text" id="searchInput" placeholder="e.g. night market, art exhibition, workshop&hellip;" autocomplete="off" aria-label="Search for an event" oninput="onSearchInput()" onfocus="onSearchInput()" onkeydown="onSearchKey(event)"/>
+        <button class="search-clear" id="searchClear" onclick="clearSearch()">&times;</button>
+        <button class="search-go" id="searchGo" onclick="submitSearch()">Seek</button>
+      </div>
+      <div class="search-drop" id="searchDrop"></div>
+    </form>
+
+    <div class="chips">
+      <span class="chip" tabindex="0" role="button" onclick="quickSearch('night market')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();quickSearch('night market')}"><span class="chip-emoji">&#127769;</span>Night Market</span>
+      <span class="chip" tabindex="0" role="button" onclick="quickSearch('art exhibition')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();quickSearch('art exhibition')}"><span class="chip-emoji">&#127912;</span>Art Exhibition</span>
+      <span class="chip" tabindex="0" role="button" onclick="quickSearch('coffee pop-up')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();quickSearch('coffee pop-up')}"><span class="chip-emoji">&#9749;</span>Coffee Pop-up</span>
+      <span class="chip" tabindex="0" role="button" onclick="quickSearch('live music')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();quickSearch('live music')}"><span class="chip-emoji">&#127908;</span>Live Music</span>
+      <span class="chip" tabindex="0" role="button" onclick="quickSearch('workshop')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();quickSearch('workshop')}"><span class="chip-emoji">&#128736;</span>Workshop</span>
+      <span class="chip" tabindex="0" role="button" onclick="quickSearch('yoga')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();quickSearch('yoga')}"><span class="chip-emoji">&#129496;</span>Yoga</span>
+    </div>
+  </div>
+
+  <div class="divider">or browse by category</div>
+
+  <div class="card-grid" id="eventGrid"></div>
+
+  <p class="tc mt-16" style="font-size:.6875rem;color:#9C948E">&#8593; Type an event or tap a card &mdash; search across 184 Jalan Besar spaces &#8593;</p>
+
+  <div class="site-footer mt-20">
+    <strong>EventSeek</strong> &middot; NUS Architecture &middot; AR5802<br>
+    An Urban Search Engine for Matching Events &amp; Spatial Conditions
+  </div>
+</section>
+
+<!-- ============================================================
+     SCREEN 1 — MATCH REVEAL
+     ============================================================ -->
+<section class="screen" id="scr-match">
+  <div class="back-row"><button class="back-btn" onclick="nav('scr-landing')">&larr; Try a different event</button></div>
+  <div class="match-block" id="matchBlock"></div>
+</section>
+
+<!-- ============================================================
+     SCREEN 2 — SPATIAL FACTORS
+     ============================================================ -->
+<section class="screen" id="scr-factors">
+  <div class="back-row"><button class="back-btn" onclick="nav('scr-match')">&larr; Back to match</button></div>
+  <span class="eyebrow">Spatial Analysis</span>
+  <h2 class="mt-4" id="factorsTitle"></h2>
+  <p class="subtle mt-4">Four spatial qualities &mdash; extracted from Street View &mdash; that make this match strong</p>
+  <div class="factor-grid" id="factorGrid"></div>
+  <div class="tc mt-20 flex-wrap flex-center gap-8" style="display:flex">
+    <button class="btn btn-dark" onclick="nav('scr-map')">See Real Locations &darr;</button>
+    <button class="btn btn-outline" onclick="nav('scr-users')">Who hosts this? &rarr;</button>
+  </div>
+</section>
+
+<!-- ============================================================
+     SCREEN 3 — CURATED MAP
+     ============================================================ -->
+<section class="screen" id="scr-map">
+  <div class="back-row"><button class="back-btn" onclick="nav('scr-factors')">&larr; Back to explanation</button></div>
+  <span class="eyebrow">Real Locations</span>
+  <h2 class="mt-4" id="mapHeading">Spaces discovered in Jalan Besar</h2>
+  <p class="subtle mt-4" id="mapSubtitle"><span id="mapCount"></span> <strong id="mapTypoLabel"></strong> <span id="mapTotalRef">discovered &mdash; tap dots to explore</span></p>
+  <div class="map-wrap" id="mapContainer"><div id="mapEl" style="height:100%"></div>
+    <div class="map-counter-badge" id="mapCounter" role="status" aria-live="polite">
+      <span class="mcb-num" id="mcbHighlight">184</span>
+      <span class="mcb-label">candidate spaces</span>
+    </div>
+  </div>
+  <div class="legend-box" id="mapLegend"></div>
+  <div class="loc-panel mt-8" id="locPanel" style="display:none">
+    <div class="lp-photo" id="locPhoto">&#128247; Street View photo</div>
+    <div class="lp-info">
+      <div class="lp-name" id="locName"></div>
+      <div class="lp-why" id="locWhy"></div>
+      <div class="loc-tags" id="locTags"></div>
+    </div>
+  </div>
+  <div class="tc mt-14 flex-wrap flex-center gap-8" style="display:flex">
+    <button class="btn btn-outline" onclick="nav('scr-users')">Who hosts this? &rarr;</button>
+    <button class="btn btn-outline" onclick="nav('scr-landing')">Try Another Event</button>
+  </div>
+</section>
+
+<!-- ============================================================
+     SCREEN 4 — USER TYPES
+     ============================================================ -->
+<section class="screen" id="scr-users">
+  <div class="back-row"><button class="back-btn" onclick="nav('scr-map')">&larr; Back</button></div>
+  <span class="eyebrow">People</span>
+  <h2 class="mt-4">Who hosts <span id="usersEvtLabel"></span>?</h2>
+  <p class="subtle mt-4">Six user types identified in the research &mdash; each with different spatial needs</p>
+  <div class="user-grid" id="userGrid"></div>
+  <p class="subtle tc mt-14" style="font-size:.75rem">Each user type has unique spatial requirements.<br><strong>EventSeek translates human needs into measurable spatial qualities.</strong></p>
+  <div class="tc mt-16 flex-wrap flex-center gap-8" style="display:flex">
+    <button class="btn btn-dark" onclick="nav('scr-behave')">How do people use these spaces? &rarr;</button>
+  </div>
+</section>
+
+<!-- ============================================================
+     SCREEN 5 — BEHAVIOUR TYPES
+     ============================================================ -->
+<section class="screen" id="scr-behave">
+  <div class="back-row"><button class="back-btn" onclick="nav('scr-users')">&larr; Back</button></div>
+  <span class="eyebrow">Behaviour</span>
+  <h2 class="mt-4">How people use these spaces</h2>
+  <p class="subtle mt-4">Three behavioural patterns &mdash; each matched to spatial typologies</p>
+  <div class="behave-grid" id="behaveGrid"></div>
+  <div class="mt-12" id="behaveMap" style="background:#fff;border:1px solid #E8E3DE;border-radius:13px;padding:14px"></div>
+  <div class="tc mt-16">
+    <button class="btn btn-dark" onclick="nav('scr-pipeline')">How does EventSeek work? &rarr;</button>
+  </div>
+</section>
+
+<!-- ============================================================
+     SCREEN 6 — PIPELINE
+     ============================================================ -->
+<section class="screen" id="scr-pipeline">
+  <div class="back-row"><button class="back-btn" onclick="nav('scr-behave')">&larr; Back</button></div>
+  <span class="eyebrow">Behind EventSeek</span>
+  <h2 class="mt-4">From user need to search-verified discovery</h2>
+  <p class="subtle mt-4">The full 7-step pipeline &mdash; each step builds on the last</p>
+  <div class="pipeline mt-14" id="pipelineEl"></div>
+  <div class="tc mt-16">
+    <button class="btn btn-dark" onclick="nav('scr-implications')">Why does this matter? &darr;</button>
+  </div>
+</section>
+
+<!-- ============================================================
+     SCREEN 7 — IMPLICATIONS + SHARE
+     ============================================================ -->
+<section class="screen" id="scr-implications">
+  <div class="back-row"><button class="back-btn" onclick="nav('scr-pipeline')">&larr; How it works</button></div>
+  <div class="mt-16" style="background:#fff;border:1px solid #E8E3DE;border-radius:15px;padding:18px;text-align:center">
+    <blockquote style="font-family:'Georgia','Noto Serif',ui-serif,serif;font-size:1.05rem;line-height:1.45;color:#3D3D3D;font-style:italic;margin-bottom:10px">
+      Urban spaces aren't just leftover land.<br>They're opportunities waiting for the right idea.
+    </blockquote>
+    <p style="font-size:.8125rem;color:#6B6560;line-height:1.45">
+      EventSeek shows that even in a highly planned city like Singapore, small, irregular leftover spaces persist &mdash; and each one has potential for the right kind of activation. EventSeek's search engine approach means every match is data-driven — not hand-picked but algorithmically discovered. Based on the analysis of 1,197 Street View panoramas across Jalan Besar, clustered into 5 spatial typologies via Self-Organizing Map.
+    </p>
+  </div>
+  <div class="tc mt-16">
+    <h3>Experience it on your phone</h3>
+    <div style="width:88px;height:88px;background:#E8E3DE;border-radius:10px;margin:12px auto;display:flex;align-items:center;justify-content:center;font-size:.6875rem;color:#9C948E">QR Code</div>
+    <p style="font-size:.75rem;color:#6B6560">Scan to explore EventSeek</p>
+  </div>
+  <div class="tc mt-14">
+    <h3>Share your result</h3>
+    <p class="subtle mt-2">What did EventSeek match you with?</p>
+    <button class="btn btn-teal mt-8" onclick="openShare()">&#128228; Share Your Match</button>
+  </div>
+  <div class="tc mt-20">
+    <button class="btn btn-dark" onclick="nav('scr-landing')">Start Over &mdash; Try Another Event</button>
+  </div>
+  <div class="site-footer mt-20">
+    <strong>EventSeek</strong><br>
+    An Urban Search Engine for Matching Events and Spatial Conditions<br><br>
+    NUS Architecture &middot; AR5802 Advanced Architecture Studio<br>
+    Lin Zhiyi &middot; 2026<br><br>
+    <span style="font-size:.625rem">Data: 1,197 Street View panoramas &middot; 5 typologies &middot; Self-Organizing Map clustering</span>
+  </div>
+</section>
+
+</div><!-- /container -->
+
+<!-- ============================================================
+     SEARCHING OVERLAY
+     ============================================================ -->
+<div class="searching-overlay" id="searchingOverlay" aria-live="polite" aria-label="Search progress">
+  <div class="searching-inner">
+    <div class="si-title" id="siTitle" aria-live="assertive">Finding your match&hellip;</div>
+    <div class="si-stages">
+      <div class="si-stage" id="siStage1"><div class="si-bullet">&#10003;</div><div class="si-text">Analysing user needs</div><div class="si-dots"><span></span><span></span><span></span></div><div class="si-check">&#10003;</div></div>
+      <div class="si-stage" id="siStage2"><div class="si-bullet">&#10003;</div><div class="si-text">Translating spatial requirements</div><div class="si-dots"><span></span><span></span><span></span></div><div class="si-check">&#10003;</div></div>
+      <div class="si-stage" id="siStage3"><div class="si-bullet">&#10003;</div><div class="si-text">Comparing urban typologies</div><div class="si-dots"><span></span><span></span><span></span></div><div class="si-check">&#10003;</div></div>
+      <div class="si-stage" id="siStage4"><div class="si-bullet">&#10003;</div><div class="si-text">Matching event behaviours</div><div class="si-dots"><span></span><span></span><span></span></div><div class="si-check">&#10003;</div></div>
+    </div>
+    <div class="si-progress-wrap"><div class="si-progress-track"><div class="si-progress-fill" id="siProgress"></div></div></div>
+  </div>
+</div>
+
+<!-- ============================================================
+     SHARE OVERLAY
+     ============================================================ -->
+<div class="share-overlay" id="shareOverlay" role="dialog" aria-modal="true" aria-label="Share your result" onclick="closeShare(event)">
+  <div class="share-card" onclick="event.stopPropagation()">
+    <div class="sc-logo">Event<i>Seek</i> &middot;</div>
+    <div class="sc-event" id="scEvent"></div>
+    <div class="sc-match">matched with</div>
+    <div style="font-size:1.1rem;font-weight:700;margin-bottom:2px" id="scTypo"></div>
+    <div class="sc-badge" id="scScore"></div>
+    <div class="sc-reasons" id="scReasons"></div>
+    <div class="sc-qr">QR</div>
+    <div class="site-footer" style="border:none;padding:8px 0">Discover your match at<br><strong>zhiyiarchi.com</strong><br>NUS Architecture &middot; AR5802</div>
+    <div class="sc-actions">
+      <button class="btn btn-outline" onclick="copyShareLink()">Copy Link</button>
+      <button class="btn btn-dark" onclick="saveShareCard()">Save Card</button>
+    </div>
+    <button class="btn btn-sm btn-outline mt-8 btn-block" onclick="document.getElementById('shareOverlay').classList.remove('open')">Close</button>
+  </div>
+</div>
+
+<!-- ============================================================
+     SCRIPTS
+     ============================================================ -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+<script>
+// ================================================================
+// DATA
+// ================================================================
+
+// Typologies (PDF-approved names)
+const TYPO = {
+  0:{name:'Golden Nodes',color:'golden',hex:'#E8618C',behaviour:'Linger',plots:308,
+     desc:'High visibility, generous shade, regular shape — the most inviting urban spaces.'},
+  1:{name:'Micro Dead Pockets',color:'micro',hex:'#2563EB',behaviour:'Linger',plots:248,
+     desc:'Tiny, enclosed, hidden from streets — intimate urban rooms for focused activities.'},
+  2:{name:'Cut-Off Exposed Grounds',color:'cutoff',hex:'#59A87E',behaviour:'Flow',plots:244,
+     desc:'Flat, open, disconnected from pedestrians — quiet expanses for movement and wellness.'},
+  3:{name:'High-Flow Open Grounds',color:'highflow',hex:'#E8A840',behaviour:'Gather',plots:230,
+     desc:'Large, open, well-connected — the natural gathering places for markets and crowds.'},
+  4:{name:'Irregular Verges',color:'irregular',hex:'#3D3D3D',behaviour:'Flow',plots:167,
+     desc:'Awkward shapes, moderate openness — versatile edge spaces for pop-ups and retail.'}
+};
+
+// User types (PDF page 7)
+const USERS = [
+  {id:'A',name:'Micro-Entrepreneurs',icon:'&#128188;',events:'Vintage markets &middot; Mobile coffee cart &middot; Zine publishers',
+   need:'Small, open spaces with high pedestrian flow'},
+  {id:'B',name:'Craft Practitioners',icon:'&#128736;',events:'Pop-up open studio &middot; Repair stations &middot; Craft workshop',
+   need:'Relatively enclosed spaces within residential communities'},
+  {id:'C',name:'Brands &amp; Creative Agencies',icon:'&#10024;',events:'Art installations &middot; Art markets &middot; Pop-up cafés &middot; Outdoor exhibition',
+   need:'Large, open spaces with high pedestrian flow and strong transport accessibility'},
+  {id:'D',name:'Community Organizers',icon:'&#127960;',events:'Outdoor cinemas &middot; Pasar Malam &middot; Flea market &middot; Weekend markets',
+   need:'Relatively open, flat large spaces within residential communities'},
+  {id:'E',name:'Independent Artists',icon:'&#127928;',events:'Busking &middot; Small concerts',
+   need:'Sites with high pedestrian flow and strong transport accessibility'},
+  {id:'F',name:'Urban Activist / Policy',icon:'&#127747;',events:'Organize regional events &middot; Optimize regional planning by time periods',
+   need:'Areas with several spaces of opportunity'}
+];
+
+// Behaviour types (PDF page 10)
+const BEHAVIOURS = {
+  Gather:{icon:'&#128101;',name:'Gather',tagline:'stay together',
+          desc:'Large groups, stationary activities &mdash; markets, performances, exhibitions'},
+  Linger:{icon:'&#9749;',name:'Linger',tagline:'stay a while',
+          desc:'Small groups, semi-stationary &mdash; cafés, workshops, studios, retail'},
+  Flow:{icon:'&#128694;',name:'Flow',tagline:'keep moving',
+        desc:'Continuous movement &mdash; food trails, gallery walks, linear markets'}
+};
+
+// Event data with recommendation logic
+const EVENTS = {
+  'Community Market':{typo:3,score:94,icon:'&#127842;',
+    reasons:[
+      {icon:'&#128208;',title:'Large Area',desc:'High-Flow Open Grounds average the largest plot area — room for stalls, aisles, and crowd circulation.'},
+      {icon:'&#128065;',title:'High Openness',desc:'93% openness ratio means the market is visible from multiple approach paths — maximum footfall.'},
+      {icon:'&#128652;',title:'Strong Transport',desc:'Highest transport accessibility score — visitors arrive from across the city.'},
+      {icon:'&#128279;',title:'Connected',desc:'Above-average pedestrian connectivity creates multiple natural entry points.'}
+    ],
+    factors:[
+      {icon:'&#128208;',name:'Large Area',desc:'High-Flow Open Grounds average 54% larger than other typologies — enough for 15–30 market stalls.'},
+      {icon:'&#128065;',name:'High Openness',desc:'93% openness ratio — the space is visible and inviting from surrounding streets.'},
+      {icon:'&#128652;',name:'Transport Access',desc:'Strong bus-stop gravity — visitors from across Singapore can reach the market easily.'},
+      {icon:'&#128279;',name:'Pedestrian Connectivity',desc:'Multiple road intersections feed foot traffic into the plot from all directions.'}
+    ],
+    secondary:[{name:'Golden Nodes',score:87,typo:0},{name:'Irregular Verges',score:68,typo:4}],
+    primaryUsers:['D','A'],behaviour:'Gather'
+  },
+  'Food & Drink Pop-up':{typo:3,score:90,icon:'&#127836;',
+    reasons:[
+      {icon:'&#128208;',title:'Large Capacity',desc:'Big enough for multiple vendors with seating and circulation space.'},
+      {icon:'&#128065;',title:'Easy to Spot',desc:'High visibility invites hungry passers-by to investigate.'},
+      {icon:'&#128652;',title:'Regional Draw',desc:'Strong transit access means food lovers from across Singapore can visit.'}
+    ],
+    factors:[
+      {icon:'&#128208;',name:'Large Capacity',desc:'High-Flow Open Grounds fit 5–8 food vendors with seating — a complete food destination.'},
+      {icon:'&#128065;',name:'Easy to Spot',desc:'93% openness means the food setup is visible — impulse visits drive pop-up dining.'},
+      {icon:'&#128652;',name:'Regional Draw',desc:'Excellent bus connectivity makes it easy for visitors from across the island.'},
+      {icon:'&#127794;',name:'Partial Shade',desc:'41% average shade provides diner comfort during daytime food events.'}
+    ],
+    secondary:[{name:'Golden Nodes',score:84,typo:0},{name:'Irregular Verges',score:72,typo:4}],
+    primaryUsers:['A','C'],behaviour:'Linger'
+  },
+  'Art Exhibition':{typo:0,score:89,icon:'&#127912;',
+    reasons:[
+      {icon:'&#128065;',title:'Maximum Visibility',desc:'Golden Nodes have the highest openness — art demands to be seen by passers-by.'},
+      {icon:'&#127794;',title:'Generous Shade',desc:'75% tree canopy protects artworks and provides visitor comfort.'},
+      {icon:'&#11088;',title:'Regular Shape',desc:'High shape regularity allows flexible, efficient curatorial layouts.'}
+    ],
+    factors:[
+      {icon:'&#128065;',name:'Maximum Visibility',desc:'Golden Nodes achieve 94% openness — the most visible typology for public art.'},
+      {icon:'&#127794;',name:'Generous Shade',desc:'75% tree canopy — the most shaded typology, ideal for outdoor exhibition comfort.'},
+      {icon:'&#11088;',name:'Regular Shape',desc:'High shape regularity allows diverse curatorial arrangements without wasted corners.'},
+      {icon:'&#128279;',name:'Well-Connected',desc:'Highest pedestrian connectivity means multiple discovery paths for exhibition visitors.'}
+    ],
+    secondary:[{name:'High-Flow Open Grounds',score:82,typo:3},{name:'Irregular Verges',score:75,typo:4}],
+    primaryUsers:['C'],behaviour:'Gather'
+  },
+  'Live Performance':{typo:1,score:87,icon:'&#127908;',
+    reasons:[
+      {icon:'&#127959;',title:'High Enclosure',desc:'Micro Dead Pockets have the highest spatial enclosure — natural acoustics and contained audience.'},
+      {icon:'&#128209;',title:'Perfectly Flat',desc:'Near-100% flatness — safe, stable performance surface.'},
+      {icon:'&#128274;',title:'Intimate Scale',desc:'Smallest plots create the close audience-performer connection that live performance needs.'}
+    ],
+    factors:[
+      {icon:'&#127959;',name:'High Enclosure',desc:'41% spatial enclosure creates a natural outdoor room — sound is contained and focused.'},
+      {icon:'&#128209;',name:'Perfectly Flat',desc:'Dead Pockets are almost perfectly flat — safe and stable for performers and audience.'},
+      {icon:'&#128274;',name:'Intimate Scale',desc:'Smallest average area — perfect for focused audience-performer connection.'},
+      {icon:'&#128270;',name:'Discovery Factor',desc:'Tucked just off main routes — the discovery moment enhances the performance experience.'}
+    ],
+    secondary:[{name:'Cut-Off Exposed Grounds',score:78,typo:2},{name:'Irregular Verges',score:72,typo:4}],
+    primaryUsers:['E'],behaviour:'Gather'
+  },
+  'Workshop / Studio':{typo:1,score:90,icon:'&#128736;',
+    reasons:[
+      {icon:'&#127959;',title:'Room-Like Enclosure',desc:'High spatial enclosure creates a focused outdoor workshop — like an urban room.'},
+      {icon:'&#128208;',title:'Compact & Efficient',desc:'Small size suits a work table and intimate group — no wasted space.'},
+      {icon:'&#128274;',title:'Private Setting',desc:'Tucked away from main routes — participants come intentionally.'}
+    ],
+    factors:[
+      {icon:'&#127959;',name:'Room-Like Enclosure',desc:'41% enclosure creates a natural outdoor room — focused, sheltered workspace.'},
+      {icon:'&#128208;',name:'Compact & Efficient',desc:'Smallest plots — perfect for an intimate workshop group of 4–8 people.'},
+      {icon:'&#128274;',name:'Private Setting',desc:'Minimal street visibility means uninterrupted creative focus for hours-long sessions.'},
+      {icon:'&#128209;',name:'Level Work Surface',desc:'Perfectly flat ground — safe for work tables, tools, and standing work.'}
+    ],
+    secondary:[{name:'Cut-Off Exposed Grounds',score:82,typo:2},{name:'Irregular Verges',score:75,typo:4}],
+    primaryUsers:['B'],behaviour:'Linger'
+  },
+  'Night Event':{typo:0,score:86,icon:'&#127769;',
+    reasons:[
+      {icon:'&#11088;',title:'Gathering Shape',desc:'Regular shape creates a natural focal point — screen or stage at the centre.'},
+      {icon:'&#128065;',title:'Night Visibility',desc:'Good openness matters for night-time safety and wayfinding.'},
+      {icon:'&#128279;',title:'Evening Access',desc:'Well-connected by lit streets — multiple safe approaches after dark.'}
+    ],
+    factors:[
+      {icon:'&#11088;',name:'Gathering Shape',desc:'High shape regularity creates a natural focal point for screen or stage.'},
+      {icon:'&#128065;',name:'Night Visibility',desc:'94% openness ensures the space is visible — critical for night safety.'},
+      {icon:'&#128279;',name:'Evening Access',desc:'Multiple street connections mean well-lit approach routes from different directions.'},
+      {icon:'&#127769;',name:'Sky Exposure',desc:'Shade is irrelevant after dark — these spaces open to the sky for evening ambiance.'}
+    ],
+    secondary:[{name:'High-Flow Open Grounds',score:83,typo:3},{name:'Irregular Verges',score:76,typo:4}],
+    primaryUsers:['D'],behaviour:'Gather'
+  },
+  'Vintage / Retail Pop-up':{typo:4,score:85,icon:'&#128722;',
+    reasons:[
+      {icon:'&#128065;',title:'Foot Traffic Ready',desc:'High openness — customers discover you naturally.'},
+      {icon:'&#128208;',title:'Right-Sized',desc:'Moderate plot size suits a cart or single stall without feeling empty.'},
+      {icon:'&#127959;',title:'Balanced Enclosure',desc:'Medium enclosure gives a boutique, intimate retail atmosphere.'}
+    ],
+    factors:[
+      {icon:'&#128065;',name:'Foot Traffic Ready',desc:'82% openness — the retail setup is visible from the street, driving impulse visits.'},
+      {icon:'&#128208;',name:'Right-Sized',desc:'Moderate dimensions suit a cart, single stall, or small display.'},
+      {icon:'&#127959;',name:'Balanced Enclosure',desc:'15% spatial enclosure creates a boutique atmosphere without feeling closed-off.'},
+      {icon:'&#9878;',name:'Versatile Character',desc:'Irregular Verges are the most versatile typology — moderate in every spatial dimension.'}
+    ],
+    secondary:[{name:'Golden Nodes',score:80,typo:0},{name:'High-Flow Open Grounds',score:76,typo:3}],
+    primaryUsers:['A'],behaviour:'Linger'
+  },
+  'Wellness Activity':{typo:2,score:88,icon:'&#129496;',
+    reasons:[
+      {icon:'&#128209;',title:'Perfectly Flat',desc:'Cut-Off Exposed Grounds are 100% flat — ideal for yoga, tai chi, and exercise.'},
+      {icon:'&#127959;',title:'Low Enclosure',desc:'Open and expansive feeling — room to breathe and move.'},
+      {icon:'&#128274;',title:'Quiet Setting',desc:'Zero pedestrian connectivity means no through-traffic interruptions.'}
+    ],
+    factors:[
+      {icon:'&#128209;',name:'Perfectly Flat',desc:'Cut-Off Exposed Grounds achieve 100% flatness — no slopes, no uneven ground.'},
+      {icon:'&#127959;',name:'Low Enclosure',desc:'13% spatial enclosure means an open, expansive feeling — room to breathe.'},
+      {icon:'&#128274;',name:'Quiet Setting',desc:'Zero pedestrian connectivity — no through-traffic to interrupt focus.'},
+      {icon:'&#128208;',name:'Moderate Size',desc:'Large enough for a class of 8–15 people with proper mat spacing.'}
+    ],
+    secondary:[{name:'Micro Dead Pockets',score:82,typo:1},{name:'Irregular Verges',score:74,typo:4}],
+    primaryUsers:['D'],behaviour:'Linger'
+  }
+};
+
+// Search keyword index
+const SEARCH_IDX = {
+  'market':'Community Market','pasar malam':'Community Market','pasar':'Community Market','flea':'Community Market',
+  'flea market':'Community Market','weekend market':'Community Market','bazaar':'Community Market','community':'Community Market',
+  'food':'Food & Drink Pop-up','drink':'Food & Drink Pop-up','coffee':'Food & Drink Pop-up','cafe':'Food & Drink Pop-up',
+  'café':'Food & Drink Pop-up','dining':'Food & Drink Pop-up','pop-up café':'Food & Drink Pop-up',
+  'coffee cart':'Food & Drink Pop-up','food truck':'Food & Drink Pop-up','beverage':'Food & Drink Pop-up',
+  'art':'Art Exhibition','exhibition':'Art Exhibition','installation':'Art Exhibition','sculpture':'Art Exhibition',
+  'gallery':'Art Exhibition','art market':'Art Exhibition','exhibit':'Art Exhibition',
+  'music':'Live Performance','concert':'Live Performance','busking':'Live Performance','performance':'Live Performance',
+  'live':'Live Performance','theatre':'Live Performance','theater':'Live Performance','stage':'Live Performance',
+  'band':'Live Performance','gig':'Live Performance','acoustic':'Live Performance','dance':'Live Performance',
+  'workshop':'Workshop / Studio','studio':'Workshop / Studio','craft':'Workshop / Studio','repair':'Workshop / Studio',
+  'maker':'Workshop / Studio','diy':'Workshop / Studio','open studio':'Workshop / Studio',
+  'night':'Night Event','cinema':'Night Event','movie':'Night Event','film':'Night Event',
+  'outdoor cinema':'Night Event','night market':'Night Event','screening':'Night Event','evening':'Night Event',
+  'vintage':'Vintage / Retail Pop-up','retail':'Vintage / Retail Pop-up','shop':'Vintage / Retail Pop-up',
+  'zine':'Vintage / Retail Pop-up','thrift':'Vintage / Retail Pop-up','boutique':'Vintage / Retail Pop-up',
+  'stall':'Vintage / Retail Pop-up','cart':'Vintage / Retail Pop-up',
+  'wellness':'Wellness Activity','yoga':'Wellness Activity','tai chi':'Wellness Activity','fitness':'Wellness Activity',
+  'exercise':'Wellness Activity','meditation':'Wellness Activity','pilates':'Wellness Activity','health':'Wellness Activity'
+};
+const EVENT_NAMES = Object.keys(EVENTS);
+
+// ================================================================
+// STATE
+// ================================================================
+let currentEvent = null;
+let mapInstance = null;
+let mapInitialized = false;
+let mapRevealCompleted = false;
+let curatedPlots = [];
+let allPlots = [];
+
+// ================================================================
+// NAVIGATION
+// ================================================================
+function nav(screenId){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('on'));
+  const t = document.getElementById(screenId);
+  if(!t) return;
+  t.classList.add('on');
+  t.scrollTop = 0;
+  window.scrollTo({top:0,behavior:'smooth'});
+  document.getElementById('searchDrop').classList.remove('open');
+
+  if(screenId==='scr-factors'&&currentEvent) renderFactors();
+  if(screenId==='scr-map'&&currentEvent) renderMap();
+  if(screenId==='scr-users'&&currentEvent) renderUsers();
+  if(screenId==='scr-behave'&&currentEvent) renderBehave();
+  if(screenId==='scr-pipeline') renderPipeline();
+}
+
+// ================================================================
+// SEARCH
+// ================================================================
+function matchEvent(q){
+  if(!q||!q.trim()) return null;
+  const ql = q.trim().toLowerCase();
+
+  // Direct match
+  for(const n of EVENT_NAMES){if(n.toLowerCase()===ql) return n;}
+
+  // Keyword (longest first)
+  const keys = Object.keys(SEARCH_IDX).sort((a,b)=>b.length-a.length);
+  for(const k of keys){if(ql.includes(k)) return SEARCH_IDX[k];}
+
+  // Partial word match
+  const words = ql.split(/\s+/).filter(w=>w.length>=3);
+  for(const w of words){
+    for(const k of keys){if(k.includes(w)||w.includes(k)) return SEARCH_IDX[k];}
+  }
+  // Fallback by name word overlap
+  for(const n of EVENT_NAMES){
+    const nw = n.toLowerCase().split(/\s+/);
+    if(words.some(w=>nw.some(x=>x.includes(w)||w.includes(x)))) return n;
+  }
+  return null;
+}
+
+function getSuggestions(q){
+  if(!q||!q.trim()) return [];
+  const ql = q.trim().toLowerCase();
+  const seen = new Set();
+  const res = [];
+  const keys = Object.keys(SEARCH_IDX).sort((a,b)=>b.length-a.length);
+  for(const k of keys){
+    if(k.includes(ql)||ql.includes(k)){
+      const n = SEARCH_IDX[k];
+      if(!seen.has(n)){seen.add(n);res.push({name:n,match:k});}
+    }
+  }
+  for(const n of EVENT_NAMES){
+    if(seen.has(n)) continue;
+    if(n.toLowerCase().includes(ql)){seen.add(n);res.push({name:n,match:null});}
+  }
+  return res.slice(0,5);
+}
+
+function onSearchInput(){
+  const inp = document.getElementById('searchInput');
+  const clr = document.getElementById('searchClear');
+  const drop = document.getElementById('searchDrop');
+  const q = inp.value;
+  clr.classList.toggle('show',q.length>0);
+  const sug = getSuggestions(q);
+  if(sug.length>0){
+    drop.innerHTML = sug.map((r,i)=>`<div class="search-drop-item" tabindex="0" role="option" aria-selected="false" onclick="quickSearch('${r.name.replace(/'/g,"\\'")}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();quickSearch('${r.name.replace(/'/g,"\\'")}')}" data-idx="${i}"><span class="sd-icon">${EVENTS[r.name].icon}</span><span class="sd-text"><div class="sd-name">${hl(r.name,q)}</div>${r.match?`<div class="sd-hint">matches "${r.match}"</div>`:''}</span><span class="sd-arrow">&#8598;</span></div>`).join('');
+    drop.classList.add('open');
+  } else {drop.classList.remove('open');}
+}
+function hl(name,q){
+  if(!q.trim()) return name;
+  const esc = q.trim().replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
+  return name.replace(new RegExp(`(${esc})`,'i'),'<strong style="color:#0D9488">$1</strong>');
+}
+function onSearchKey(e){
+  if(e.key==='Enter'){e.preventDefault();submitSearch();return}
+  if(e.key==='Escape'){document.getElementById('searchDrop').classList.remove('open');document.getElementById('searchInput').blur()}
+}
+function submitSearch(){
+  const q = document.getElementById('searchInput').value.trim();
+  if(!q) return;
+  document.getElementById('searchDrop').classList.remove('open');
+  const m = matchEvent(q);
+  if(m){selectEvent(m);return}
+  // Fallback
+  const words = q.split(/\s+/).filter(w=>w.length>=3);
+  let best=null,bs=0;
+  for(const n of EVENT_NAMES){
+    const nl=n.toLowerCase();let s=0;
+    for(const w of words){if(nl.includes(w)) s+=w.length;}
+    if(s>bs){bs=s;best=n;}
+  }
+  selectEvent(best||'Community Market');
+}
+function quickSearch(q){
+  document.getElementById('searchInput').value = q;
+  document.getElementById('searchClear').classList.add('show');
+  document.getElementById('searchDrop').classList.remove('open');
+  const m = matchEvent(q);
+  if(m) selectEvent(m);
+}
+function clearSearch(){
+  const inp = document.getElementById('searchInput');
+  inp.value='';document.getElementById('searchClear').classList.remove('show');
+  document.getElementById('searchDrop').classList.remove('open');inp.focus();
+}
+document.addEventListener('click',function(e){
+  const sb = document.getElementById('searchBox');
+  if(sb&&!sb.contains(e.target)) document.getElementById('searchDrop').classList.remove('open');
+});
+
+// ================================================================
+// SEARCHING SEQUENCE
+// ================================================================
+function runSearching(cb,eventData,typoCount,totalCount){
+  const ov = document.getElementById('searchingOverlay');
+  const stages = [document.getElementById('siStage1'),document.getElementById('siStage2'),document.getElementById('siStage3'),document.getElementById('siStage4')];
+  const prog = document.getElementById('siProgress');
+  const title = document.getElementById('siTitle');
+
+  stages.forEach(s=>{s.classList.remove('show','active','done')});
+  prog.style.width='0%';title.textContent='Finding your match…';
+  ov.classList.add('on');ov.classList.remove('out');
+
+  // Set dynamic stage texts based on real data
+  const typoName = TYPO[eventData.typo].name;
+  const stageTexts = [
+    `Scanning ${totalCount} candidate spaces across Jalan Besar`,
+    `Filtering — ${typoCount} ${typoName} discovered`,
+    `Scoring each space by openness, shade, enclosure`,
+    `Selecting 4 representative examples`
+  ];
+  stages.forEach((s,i)=>{s.querySelector('.si-text').textContent=stageTexts[i];});
+
+  const DELAYS = [0,320,640,960];
+  const DONE = [280,600,920,1280];
+  const TOTAL = 1700;
+
+  stages.forEach((s,i)=>{
+    setTimeout(()=>{s.classList.add('show','active');prog.style.width=((i+1)*22)+'%'},DELAYS[i]);
+    setTimeout(()=>{s.classList.remove('active');s.classList.add('done');prog.style.width=((i+1)*25)+'%';if(i===3)title.textContent='Discovered!'},DONE[i]);
+  });
+  setTimeout(()=>{
+    prog.style.width='100%';ov.classList.add('out');
+    setTimeout(()=>{ov.classList.remove('on','out');cb()},350);
+  },TOTAL);
+}
+
+// ================================================================
+// EVENT SELECTION
+// ================================================================
+function selectEvent(name){
+  const data = EVENTS[name];
+  if(!data) return;
+  currentEvent = name;
+  mapRevealCompleted = false; // Reset map animation for new search
+
+  // Compute search space counts
+  const typoCount = allPlots.filter(p=>p.cluster===data.typo).length;
+  const totalCount = allPlots.length;
+
+  // Visual feedback on cards
+  document.querySelectorAll('.event-card').forEach(c=>{c.classList.add('dim');c.classList.remove('chosen')});
+  // Find matching card
+  const cards = document.querySelectorAll('.event-card');
+  cards.forEach(c=>{
+    if(c.querySelector('.ec-label')&&c.querySelector('.ec-label').textContent===name){
+      c.classList.remove('dim');c.classList.add('chosen');
+    }
+  });
+  document.getElementById('searchDrop').classList.remove('open');
+
+  runSearching(()=>{
+    renderMatch(data,name,typoCount,totalCount);
+    nav('scr-match');
+  },data,typoCount,totalCount);
+}
+
+// ================================================================
+// RENDER: MATCH
+// ================================================================
+function renderMatch(data,name,typoCount,totalCount){
+  const t = TYPO[data.typo];
+  document.getElementById('matchBlock').innerHTML = `
+    <div class="match-tag">&#10024; Best Match</div>
+    <p class="subtle">Your <strong>${name}</strong> belongs in&hellip;</p>
+    <div class="match-typo-card">
+      <span class="typo-dot bg-${t.color}"></span>
+      <span class="mt-name">${t.name}</span>
+    </div>
+    <p class="search-source-note">${totalCount} candidate spaces &rarr; <strong>${typoCount} ${t.name}</strong> discovered</p>
+    <div class="score-wrap">
+      <div class="score-row"><span>Match Score</span><span class="sc-pct">${data.score}%</span></div>
+      <div class="score-track"><div class="score-fill" id="scoreBar" style="--s:${data.score}%"></div></div>
+    </div>
+    <div class="reason-list">${data.reasons.map(r=>`<div class="reason-item"><span class="ri-icon">${r.icon}</span><span class="ri-text"><strong>${r.title}</strong>${r.desc}</span></div>`).join('')}</div>
+    <div class="mt-16 flex-wrap flex-center gap-8" style="display:flex">
+      <button class="btn btn-dark" onclick="nav('scr-factors')">Why this match?</button>
+      <button class="btn btn-outline" onclick="nav('scr-map')">See Real Locations</button>
+    </div>
+    <div class="sec-matches mt-12 flex-center">
+      <span style="font-size:.6875rem;color:#9C948E;width:100%;text-align:center;margin-bottom:2px">Also works well:</span>
+      <span class="sec-match">${data.secondary[0].name} <span class="pct">${data.secondary[0].score}%</span></span>
+      <span class="sec-match">${data.secondary[1].name} <span class="pct">${data.secondary[1].score}%</span></span>
+    </div>`;
+  // Animate score bar
+  setTimeout(()=>{const b=document.getElementById('scoreBar');if(b) b.classList.add('go')},200);
+}
+
+// ================================================================
+// RENDER: FACTORS
+// ================================================================
+function renderFactors(){
+  const data = EVENTS[currentEvent];
+  const t = TYPO[data.typo];
+  document.getElementById('factorsTitle').innerHTML = `Why <span style="color:${t.hex}">${t.name}</span> work for <span>${currentEvent}</span>`;
+  document.getElementById('factorGrid').innerHTML = data.factors.map(f=>`<div class="factor-card"><div class="fc-icon">${f.icon}</div><div class="fc-name">${f.name}</div><div class="fc-desc">${f.desc}</div></div>`).join('');
+}
+
+// ================================================================
+// RENDER: MAP (Leaflet)
+// ================================================================
+function renderMap(){
+  const data = EVENTS[currentEvent];
+  const t = TYPO[data.typo];
+  const typoName = t.name;
+  const typoPlots = allPlots.filter(p=>p.cluster===data.typo);
+  const typoCount = typoPlots.length;
+  const totalCount = allPlots.length;
+  const exemplars = curatedPlots.filter(p=>p.cluster===data.typo);
+
+  // Update heading and subtitle
+  document.getElementById('mapHeading').textContent = 'Spaces discovered in Jalan Besar';
+  document.getElementById('mapTypoLabel').textContent = typoName;
+  document.getElementById('mapCount').textContent = typoCount;
+  document.getElementById('mapTotalRef').textContent = `discovered from ${totalCount} candidates — tap dots to explore`;
+
+  if(!mapInitialized){
+    initMap();
+    mapInitialized = true;
+  }
+
+  // Clear existing layers and pending timeouts from previous render
+  if(mapInstance._revealTimeouts){
+    mapInstance._revealTimeouts.forEach(clearTimeout);
+    mapInstance._revealTimeouts = null;
+  }
+  if(mapInstance._allBgLayer) mapInstance.removeLayer(mapInstance._allBgLayer);
+  if(mapInstance._typoLayer) mapInstance.removeLayer(mapInstance._typoLayer);
+  if(mapInstance._exemplarLayer) mapInstance.removeLayer(mapInstance._exemplarLayer);
+
+  // Update legend
+  document.getElementById('mapLegend').innerHTML = Object.values(TYPO).map(ty=>`<div class="lg-row"><span class="lg-dot" style="background:${ty.hex};${ty.name===typoName?'box-shadow:0 0 0 2px '+ty.hex+';':''}"></span>${ty.name}${ty.name===typoName?' ←':''}</div>`).join('');
+
+  // Fit bounds to typology plots
+  if(typoPlots.length>0){
+    const lats = typoPlots.map(p=>p.lat);
+    const lons = typoPlots.map(p=>p.lon);
+    mapInstance.fitBounds([[Math.min(...lats),Math.min(...lons)],[Math.max(...lats),Math.max(...lons)]],{padding:[30,30]});
+  }
+  setTimeout(()=>mapInstance.invalidateSize(),150);
+
+  // If reveal already completed for this search, render final state immediately
+  if(mapRevealCompleted){
+    renderAllBgLayer(0.07);
+    renderTypoLayer(0.8);
+    renderExemplarLayer(1);
+    if(exemplars.length>0) selectPlot(exemplars[0],0);
+    updateMapCounter('3','4','representative examples');
+    return;
+  }
+
+  // ---- Build three layers ----
+  // Level 1: All 184 as uniform background (the search space)
+  renderAllBgLayer(0.4);
+
+  // Level 2: All plots belonging to this spatial condition
+  renderTypoLayer(0.4); // Start hidden in crowd
+
+  // Level 3: 4 representative exemplars
+  renderExemplarLayer(0); // Start invisible
+
+  const timeouts = [];
+
+  // Reset badge
+  updateMapCounter('1',totalCount.toString(),'candidate spaces');
+
+  // Level 2 reveal (900ms): spatial condition discovered
+  timeouts.push(setTimeout(()=>{
+    // Dim background layer (all typologies)
+    if(mapInstance._allBgLayer){
+      mapInstance._allBgLayer.eachLayer(m=>{
+        m.setStyle({opacity:0.07,fillOpacity:0.07,weight:0});
+      });
+    }
+    // Brighten typology layer
+    if(mapInstance._typoLayer){
+      mapInstance._typoLayer.eachLayer(m=>{
+        m.setStyle({opacity:0.8,fillOpacity:0.8,weight:1.5});
+      });
+    }
+    updateMapCounter('2',typoCount.toString(),typoName+'<br><span style="font-size:.5rem;font-weight:400;text-transform:none;letter-spacing:0">discovered</span>');
+  },900));
+
+  // Level 3 reveal (1800ms): representative exemplars appear
+  timeouts.push(setTimeout(()=>{
+    if(mapInstance._exemplarLayer){
+      mapInstance._exemplarLayer.eachLayer(m=>{
+        m.setStyle({opacity:1,fillOpacity:0.9});
+      });
+    }
+    updateMapCounter('3','4','representative examples');
+    if(exemplars.length>0) selectPlot(exemplars[0],0);
+    mapRevealCompleted = true;
+  },1800));
+
+  mapInstance._revealTimeouts = timeouts;
+}
+
+// Helper: render all-background layer
+function renderAllBgLayer(opacity){
+  if(mapInstance._allBgLayer) mapInstance.removeLayer(mapInstance._allBgLayer);
+  const layer = L.layerGroup();
+  allPlots.forEach(p=>{
+    const color = TYPO[p.cluster]?TYPO[p.cluster].hex:'#999';
+    L.circleMarker([p.lat,p.lon],{radius:4,fillColor:color,color:color,weight:0.5,opacity,fillOpacity:opacity}).addTo(layer);
+  });
+  layer.addTo(mapInstance);
+  mapInstance._allBgLayer = layer;
+}
+
+// Helper: render typology layer (all plots belonging to matched spatial condition)
+function renderTypoLayer(opacity){
+  if(mapInstance._typoLayer) mapInstance.removeLayer(mapInstance._typoLayer);
+  const data = EVENTS[currentEvent];
+  const t = TYPO[data.typo];
+  const layer = L.layerGroup();
+  allPlots.forEach(p=>{
+    if(p.cluster!==data.typo) return;
+    L.circleMarker([p.lat,p.lon],{radius:5.5,fillColor:t.hex,color:t.hex,weight:1,opacity,fillOpacity:opacity}).addTo(layer);
+  });
+  layer.addTo(mapInstance);
+  mapInstance._typoLayer = layer;
+}
+
+// Helper: render exemplar layer (4 representative examples)
+function renderExemplarLayer(opacity){
+  if(mapInstance._exemplarLayer) mapInstance.removeLayer(mapInstance._exemplarLayer);
+  const data = EVENTS[currentEvent];
+  const t = TYPO[data.typo];
+  const exemplars = curatedPlots.filter(p=>p.cluster===data.typo);
+  const layer = L.layerGroup();
+  exemplars.forEach((p,i)=>{
+    const marker = L.circleMarker([p.lat,p.lon],{
+      radius:10,fillColor:t.hex,color:'#fff',weight:3,opacity,fillOpacity:opacity
+    }).bindPopup(`<div class="plot-popup"><strong>${t.name} — Representative Example ${i+1}</strong><div class="pp-typo">Plot #${p.plot_id.split('_')[0].slice(-4)} &middot; ${p.area_sqm} m&sup2;</div><div class="pp-metrics">Openness: ${(p.openness*100).toFixed(0)}% &middot; Shade: ${(p.shade*100).toFixed(0)}% &middot; Enclosure: ${(p.enclosure*100).toFixed(0)}%</div></div>`);
+    marker.on('click',()=>selectPlot(p,i));
+    // Permanent label
+    const label = L.tooltip({
+      permanent:true,direction:'top',
+      className:'exemplar-label',
+      offset:[0,-10]
+    }).setContent(`<strong>Example ${i+1}</strong>`);
+    marker.bindTooltip(label);
+    marker.addTo(layer);
+  });
+  layer.addTo(mapInstance);
+  mapInstance._exemplarLayer = layer;
+}
+
+function initMap(){
+  mapInstance = L.map('mapEl',{zoomControl:true,attributionControl:false}).setView([1.3075,103.855],16);
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',{
+    maxZoom:19,attribution:'&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> &copy; <a href="https://carto.com/">CARTO</a>'
+  }).addTo(mapInstance);
+  // Invalidate size after container becomes visible
+  setTimeout(()=>mapInstance.invalidateSize(),100);
+}
+
+let selectedPlotIdx = -1;
+function selectPlot(plot,idx){
+  selectedPlotIdx = idx;
+  const t = TYPO[plot.cluster];
+  document.getElementById('locPanel').style.display = 'block';
+  document.getElementById('locPhoto').innerHTML = '&#128247; Street View &mdash; Representative Example ' + (idx+1);
+  document.getElementById('locName').innerHTML = `<span style="color:${t.hex}">${t.name}</span> &mdash; Representative Example ${idx+1}`;
+  document.getElementById('locWhy').textContent = `${plot.area_sqm} m² &middot; Openness ${(plot.openness*100).toFixed(0)}% &middot; Shade ${(plot.shade*100).toFixed(0)}% &middot; Enclosure ${(plot.enclosure*100).toFixed(0)}%`;
+  document.getElementById('locTags').innerHTML = `<span class="loc-tag">${plot.area_sqm} m&sup2;</span><span class="loc-tag">Openness ${(plot.openness*100).toFixed(0)}%</span><span class="loc-tag">Enclosure ${(plot.enclosure*100).toFixed(0)}%</span><span class="loc-tag">${t.behaviour} behaviour</span><span class="loc-tag">Closest to centroid</span>`;
+}
+
+// ================================================================
+// MAP COUNTER BADGE
+// ================================================================
+function updateMapCounter(level,highlight,label){
+  const badge = document.getElementById('mapCounter');
+  if(!badge) return;
+  badge.className = 'map-counter-badge';
+  if(level==='2') badge.classList.add('level2');
+  if(level==='3') badge.classList.add('level3');
+  document.getElementById('mcbHighlight').textContent = highlight;
+  badge.querySelector('.mcb-label').innerHTML = label;
+}
+
+// ================================================================
+// RENDER: USERS
+// ================================================================
+function renderUsers(){
+  const data = EVENTS[currentEvent];
+  document.getElementById('usersEvtLabel').textContent = currentEvent;
+  document.getElementById('userGrid').innerHTML = USERS.map(u=>{
+    const isPri = data.primaryUsers.includes(u.id);
+    return `<div class="user-card${isPri?' primary':''}"><div class="uc-icon">${u.icon}</div><div class="uc-name">${u.name}</div><div class="uc-events">${u.events}</div>${isPri?'<div class="uc-tag">Primary host</div>':''}<div class="uc-events mt-4" style="font-style:italic">Need: ${u.need}</div></div>`;
+  }).join('');
+}
+
+// ================================================================
+// RENDER: BEHAVIOUR
+// ================================================================
+function renderBehave(){
+  const data = EVENTS[currentEvent];
+  const t = TYPO[data.typo];
+  document.getElementById('behaveGrid').innerHTML = Object.entries(BEHAVIOURS).map(([k,b])=>{
+    const active = k===data.behaviour;
+    return `<div class="behave-card${active?' on':''}"><div class="bc-icon">${b.icon}</div><div class="bc-name">${b.name}</div><div class="bc-tag">${b.tagline}</div><div class="bc-desc">${b.desc}</div></div>`;
+  }).join('');
+  document.getElementById('behaveMap').innerHTML = `<div class="tc"><p style="font-size:.8125rem;margin-bottom:6px"><strong>${currentEvent}</strong> &rarr; <strong style="color:${t.hex}">${t.name}</strong></p><p style="font-size:.875rem;font-weight:600;margin-bottom:2px">Dominant behaviour: <span style="font-size:1.15rem">${BEHAVIOURS[data.behaviour].icon}</span> <strong>${data.behaviour}</strong></p><p style="font-size:.75rem;color:#6B6560">${BEHAVIOURS[data.behaviour].desc}</p></div>`;
+}
+
+// ================================================================
+// RENDER: PIPELINE
+// ================================================================
+function renderPipeline(){
+  document.getElementById('pipelineEl').innerHTML = [
+    {n:1,h:'User Type',p:'Six user types identified: Micro-Entrepreneurs, Craft Practitioners, Brands &amp; Agencies, Community Organizers, Independent Artists, Urban Activists'},
+    {n:2,h:'Event Intent',p:'Each user type seeks specific events &mdash; from vintage markets to outdoor cinemas to busking spots'},
+    {n:3,h:'Needs Translation',p:'Human spatial needs are translated into 8 measurable metrics: Area, Shape Regularity, Transport Accessibility, Flatness, Pedestrian Connectivity, Openness Ratio, Shade Ratio, Spatial Enclosure'},
+    {n:4,h:'Urban Data SOM',p:'1,197 Street View panoramas are analysed. A Self-Organizing Map clusters them into 5 spatial typologies based on how the 8 metrics relate to each other'},
+    {n:5,h:'Site Typology',p:'<strong>Golden Nodes</strong> (308) &middot; <strong>Micro Dead Pockets</strong> (248) &middot; <strong>Cut-Off Exposed Grounds</strong> (244) &middot; <strong>High-Flow Open Grounds</strong> (230) &middot; <strong>Irregular Verges</strong> (167)'},
+    {n:6,h:'Behaviour Strategy',p:'Three behavioural patterns: <strong>Gather</strong> (stay together) &middot; <strong>Linger</strong> (stay a while) &middot; <strong>Flow</strong> (keep moving)'},
+    {n:7,h:'Design Recommendation',p:'EventSeek recommends which typologies best support which events &mdash; and suggests spatial strategies for activation'}
+  ].map(s=>`<div class="pipe-step"><div class="ps-num">${s.n}</div><div class="ps-text"><h4>${s.h}</h4><p>${s.p}</p></div></div>`).join('');
+}
+
+// ================================================================
+// SHARE CARD
+// ================================================================
+function openShare(){
+  if(!currentEvent) return;
+  const data = EVENTS[currentEvent];
+  const t = TYPO[data.typo];
+  document.getElementById('scEvent').textContent = currentEvent;
+  document.getElementById('scTypo').textContent = t.name;
+  document.getElementById('scScore').textContent = data.score+'% match';
+  document.getElementById('scReasons').innerHTML = data.reasons.slice(0,3).map(r=>`<div class="sc-reason">${r.title} &mdash; ${r.desc}</div>`).join('');
+  document.getElementById('shareOverlay').classList.add('open');
+}
+function closeShare(e){
+  if(e.target===document.getElementById('shareOverlay')) document.getElementById('shareOverlay').classList.remove('open');
+}
+function copyShareLink(){
+  const url = window.location.href.split('?')[0]+'?event='+encodeURIComponent(currentEvent||'');
+  if(navigator.clipboard){navigator.clipboard.writeText(url).then(()=>alert('Link copied!'))}
+  else alert('Link: '+url);
+}
+function saveShareCard(){
+  alert('Screenshot this card to share on Xiaohongshu / social media. (Card saving via Web Share API in production.)');
+}
+
+// ================================================================
+// INIT
+// ================================================================
+function init(){
+  // Render event cards
+  document.getElementById('eventGrid').innerHTML = EVENT_NAMES.map(name=>{
+    const d = EVENTS[name];
+    const id = name.toLowerCase().replace(/[^a-z0-9\s-]/g,'').replace(/\s+/g,'-').replace(/--+/g,'-');
+    return `<div class="event-card" tabindex="0" role="button" aria-label="Select ${name}" onclick="selectEvent('${name.replace(/'/g,"\\'")}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();selectEvent('${name.replace(/'/g,"\\'")}')}" data-event="${id}"><span class="ec-icon">${d.icon}</span><span class="ec-label">${name}</span><span class="ec-hint">${TYPO[d.typo].name} &middot; ${d.score}% match</span></div>`;
+  }).join('');
+
+  // Load plot data
+  loadPlotData();
+
+  // Keyboard nav for exhibition kiosk
+  document.addEventListener('keydown',function(e){
+    if(document.activeElement===document.getElementById('searchInput')) return;
+    if(e.key==='Escape'){document.getElementById('shareOverlay').classList.remove('open');return}
+    if(document.getElementById('scr-landing').classList.contains('on')){
+      const num = parseInt(e.key);
+      if(num>=1&&num<=EVENT_NAMES.length) selectEvent(EVENT_NAMES[num-1]);
+    }
+  });
+
+  // URL param: ?event=Community%20Market
+  const params = new URLSearchParams(window.location.search);
+  const evtParam = params.get('event');
+  if(evtParam){
+    const m = matchEvent(decodeURIComponent(evtParam));
+    if(m) setTimeout(()=>selectEvent(m),600);
+  }
+
+  console.log('%cEventSeek%c v1.0 %cProduction',
+    'font-weight:700;color:#E8A840','color:#1A1A1A','color:#9C948E');
+  console.log('Urban Search Engine for Matching Events & Spatial Conditions');
+  console.log('NUS Architecture · AR5802 · Lin Zhiyi · 2026');
+  console.log('Data: 1,197 Street View panoramas · 5 typologies · SOM clustering');
+}
+
+function loadPlotData(){
+  // Curated plots (20) — embedded inline for zero network requests
+  curatedPlots = [
+    {"plot_id":"30181.6_32589.5","cluster":0,"lon":103.852921,"lat":1.311002,"area_sqm":512.7,"connectivity":0.094,"openness":0.597,"shade":0.59,"enclosure":0.154,"flatness":0.0,"centrality":0.108},
+    {"plot_id":"30180.7_32589.9","cluster":0,"lon":103.852913,"lat":1.311006,"area_sqm":554.7,"connectivity":0.094,"openness":0.802,"shade":0.648,"enclosure":0.156,"flatness":0.0,"centrality":0.108},
+    {"plot_id":"30208.3_32636.7","cluster":0,"lon":103.853161,"lat":1.311429,"area_sqm":1368.1,"connectivity":0.094,"openness":0.907,"shade":0.799,"enclosure":0.119,"flatness":0.0,"centrality":0.099},
+    {"plot_id":"30180.5_32589.7","cluster":0,"lon":103.852911,"lat":1.311004,"area_sqm":266.8,"connectivity":0.094,"openness":0.876,"shade":0.782,"enclosure":0.18,"flatness":0.0,"centrality":0.108},
+    {"plot_id":"30178.3_32531.2","cluster":1,"lon":103.852892,"lat":1.310475,"area_sqm":44.4,"connectivity":0.0,"openness":0.0,"shade":0.0,"enclosure":0.387,"flatness":1.0,"centrality":0.176},
+    {"plot_id":"30200.6_32549.9","cluster":1,"lon":103.853091,"lat":1.310645,"area_sqm":41.6,"connectivity":0.0,"openness":0.0,"shade":0.0,"enclosure":0.399,"flatness":1.0,"centrality":0.148},
+    {"plot_id":"30178.2_32531.2","cluster":1,"lon":103.852891,"lat":1.310475,"area_sqm":15.3,"connectivity":0.0,"openness":0.0,"shade":0.0,"enclosure":0.468,"flatness":1.0,"centrality":0.176},
+    {"plot_id":"30200.5_32549.9","cluster":1,"lon":103.85309,"lat":1.310645,"area_sqm":65.2,"connectivity":0.0,"openness":0.0,"shade":0.0,"enclosure":0.37,"flatness":1.0,"centrality":0.148},
+    {"plot_id":"30250.5_32020.8","cluster":2,"lon":103.85354,"lat":1.305859,"area_sqm":559.1,"connectivity":0.0,"openness":0.0,"shade":0.0,"enclosure":0.153,"flatness":1.0,"centrality":0.211},
+    {"plot_id":"29851.6_32267.3","cluster":2,"lon":103.849986,"lat":1.308078,"area_sqm":592.4,"connectivity":0.0,"openness":0.0,"shade":0.0,"enclosure":0.117,"flatness":1.0,"centrality":0.029},
+    {"plot_id":"30277.9_32070.4","cluster":2,"lon":103.85378,"lat":1.306307,"area_sqm":98.3,"connectivity":0.0,"openness":0.0,"shade":0.0,"enclosure":0.179,"flatness":1.0,"centrality":0.242},
+    {"plot_id":"30277.2_32070.7","cluster":2,"lon":103.853774,"lat":1.30631,"area_sqm":2437.6,"connectivity":0.0,"openness":0.0,"shade":0.0,"enclosure":0.137,"flatness":1.0,"centrality":0.242},
+    {"plot_id":"30383.0_32443.8","cluster":3,"lon":103.854731,"lat":1.309685,"area_sqm":1453.1,"connectivity":0.031,"openness":0.997,"shade":0.433,"enclosure":0.101,"flatness":0.0,"centrality":0.36},
+    {"plot_id":"30382.7_32449.6","cluster":3,"lon":103.854729,"lat":1.309737,"area_sqm":1642.5,"connectivity":0.047,"openness":1.0,"shade":0.443,"enclosure":0.108,"flatness":0.0,"centrality":0.361},
+    {"plot_id":"30166.8_32585.4","cluster":3,"lon":103.85279,"lat":1.310965,"area_sqm":1150.5,"connectivity":0.063,"openness":0.998,"shade":0.416,"enclosure":0.123,"flatness":0.0,"centrality":0.102},
+    {"plot_id":"30390.1_32430.2","cluster":3,"lon":103.854794,"lat":1.309562,"area_sqm":1851.8,"connectivity":0.016,"openness":0.988,"shade":0.27,"enclosure":0.044,"flatness":0.0,"centrality":0.351},
+    {"plot_id":"30366.6_32297.9","cluster":4,"lon":103.854583,"lat":1.308365,"area_sqm":387.9,"connectivity":0.031,"openness":0.762,"shade":0.197,"enclosure":0.159,"flatness":0.0,"centrality":0.088},
+    {"plot_id":"30366.5_32297.9","cluster":4,"lon":103.854582,"lat":1.308365,"area_sqm":271.5,"connectivity":0.031,"openness":0.748,"shade":0.377,"enclosure":0.469,"flatness":0.0,"centrality":0.088},
+    {"plot_id":"30300.3_32282.8","cluster":4,"lon":103.853985,"lat":1.308225,"area_sqm":337.8,"connectivity":0.063,"openness":0.797,"shade":0.309,"enclosure":0.275,"flatness":0.0,"centrality":0.284},
+    {"plot_id":"30178.4_32531.2","cluster":4,"lon":103.852893,"lat":1.310475,"area_sqm":50.8,"connectivity":0.0,"openness":0.0,"shade":0.0,"enclosure":0.273,"flatness":0.0,"centrality":0.176}
+  ];
+
+  // All study plots (184) — loaded for map background
+  allPlots = [
+    {"plot_id":"22257.1_29349.1","cluster":0,"lon":103.84994,"lat":1.303076,"area_sqm":3943.3},
+    {"plot_id":"30123.3_32553.1","cluster":0,"lon":103.852401,"lat":1.310668,"area_sqm":758.9},
+    {"plot_id":"30124.1_32553.3","cluster":0,"lon":103.852408,"lat":1.31067,"area_sqm":503.5},
+    {"plot_id":"30129.6_32556.0","cluster":0,"lon":103.852457,"lat":1.310694,"area_sqm":1681.4},
+    {"plot_id":"30129.3_32557.5","cluster":0,"lon":103.852454,"lat":1.310708,"area_sqm":790.3},
+    {"plot_id":"30131.0_32555.4","cluster":0,"lon":103.852469,"lat":1.310689,"area_sqm":427.2},
+    {"plot_id":"30132.4_32555.4","cluster":0,"lon":103.852482,"lat":1.310689,"area_sqm":1124.5},
+    {"plot_id":"30166.1_32590.5","cluster":0,"lon":103.852785,"lat":1.31101,"area_sqm":759.6},
+    {"plot_id":"30166.4_32587.7","cluster":0,"lon":103.852787,"lat":1.310986,"area_sqm":992.3},
+    {"plot_id":"30168.2_32587.8","cluster":0,"lon":103.852803,"lat":1.310986,"area_sqm":296.4},
+    {"plot_id":"30172.2_32585.9","cluster":0,"lon":103.852838,"lat":1.31097,"area_sqm":419.1},
+    {"plot_id":"30172.5_32585.6","cluster":0,"lon":103.85284,"lat":1.310967,"area_sqm":142.1},
+    {"plot_id":"30177.2_32584.0","cluster":0,"lon":103.852883,"lat":1.310953,"area_sqm":98.5},
+    {"plot_id":"30178.9_32586.2","cluster":0,"lon":103.852898,"lat":1.310972,"area_sqm":2784.8},
+    {"plot_id":"30181.6_32589.5","cluster":0,"lon":103.852921,"lat":1.311002,"area_sqm":512.7},
+    {"plot_id":"30180.7_32589.9","cluster":0,"lon":103.852913,"lat":1.311006,"area_sqm":554.7},
+    {"plot_id":"30180.5_32589.7","cluster":0,"lon":103.852911,"lat":1.311004,"area_sqm":266.8},
+    {"plot_id":"30202.5_32582.7","cluster":0,"lon":103.853107,"lat":1.31094,"area_sqm":114.8},
+    {"plot_id":"30208.3_32636.7","cluster":0,"lon":103.853161,"lat":1.311429,"area_sqm":1368.1},
+    {"plot_id":"30209.9_32635.3","cluster":0,"lon":103.853175,"lat":1.311416,"area_sqm":609.6},
+    {"plot_id":"30242.6_32533.2","cluster":0,"lon":103.853464,"lat":1.31049,"area_sqm":486.8},
+    {"plot_id":"30243.7_32556.0","cluster":0,"lon":103.853474,"lat":1.310697,"area_sqm":556.9},
+    {"plot_id":"30251.9_32552.0","cluster":0,"lon":103.853546,"lat":1.310661,"area_sqm":108.6},
+    {"plot_id":"30253.4_32557.3","cluster":0,"lon":103.85356,"lat":1.310709,"area_sqm":372.0},
+    {"plot_id":"30279.5_32497.8","cluster":0,"lon":103.853791,"lat":1.310171,"area_sqm":496.6},
+    {"plot_id":"30279.8_32499.2","cluster":0,"lon":103.853794,"lat":1.310183,"area_sqm":606.9},
+    {"plot_id":"30109.7_29709.3","cluster":1,"lon":103.850664,"lat":1.302688,"area_sqm":150.5},
+    {"plot_id":"30111.1_29709.0","cluster":1,"lon":103.850675,"lat":1.302685,"area_sqm":53.7},
+    {"plot_id":"30121.2_29701.9","cluster":1,"lon":103.850765,"lat":1.302621,"area_sqm":67.7},
+    {"plot_id":"30136.1_30688.4","cluster":1,"lon":103.851308,"lat":1.306067,"area_sqm":1.8},
+    {"plot_id":"30307.9_29829.8","cluster":1,"lon":103.852414,"lat":1.303777,"area_sqm":184.6},
+    {"plot_id":"30138.4_32042.6","cluster":1,"lon":103.851522,"lat":1.30601,"area_sqm":86.8},
+    {"plot_id":"30178.4_32531.2","cluster":1,"lon":103.852893,"lat":1.310475,"area_sqm":50.8},
+    {"plot_id":"30183.5_32477.3","cluster":1,"lon":103.85293,"lat":1.309988,"area_sqm":54.5},
+    {"plot_id":"30207.6_32490.8","cluster":1,"lon":103.853145,"lat":1.31011,"area_sqm":15.3},
+    {"plot_id":"30226.3_32463.8","cluster":1,"lon":103.85331,"lat":1.309867,"area_sqm":31.3},
+    {"plot_id":"30250.3_32450.8","cluster":1,"lon":103.85352,"lat":1.309748,"area_sqm":44.3},
+    {"plot_id":"30266.1_32443.8","cluster":1,"lon":103.853659,"lat":1.309685,"area_sqm":68.9},
+    {"plot_id":"30267.6_32455.8","cluster":1,"lon":103.853676,"lat":1.309793,"area_sqm":58.5},
+    {"plot_id":"30287.0_32444.1","cluster":1,"lon":103.853847,"lat":1.309688,"area_sqm":6.1},
+    {"plot_id":"30288.5_32462.6","cluster":1,"lon":103.853864,"lat":1.309856,"area_sqm":27.9},
+    {"plot_id":"30306.9_30707.8","cluster":1,"lon":103.853144,"lat":1.306233,"area_sqm":240.7},
+    {"plot_id":"30310.1_30676.7","cluster":1,"lon":103.853169,"lat":1.306108,"area_sqm":17.9},
+    {"plot_id":"30324.4_31629.7","cluster":1,"lon":103.853793,"lat":1.307769,"area_sqm":83.7},
+    {"plot_id":"30325.7_31628.9","cluster":1,"lon":103.853805,"lat":1.307762,"area_sqm":121.5},
+    {"plot_id":"30328.4_32234.5","cluster":1,"lon":103.854204,"lat":1.307791,"area_sqm":8.5},
+    {"plot_id":"30328.6_32231.8","cluster":1,"lon":103.854206,"lat":1.307766,"area_sqm":5.9},
+    {"plot_id":"30335.0_32231.4","cluster":1,"lon":103.854263,"lat":1.307763,"area_sqm":220.8},
+    {"plot_id":"30339.0_31646.2","cluster":1,"lon":103.853927,"lat":1.307919,"area_sqm":15.5},
+    {"plot_id":"30339.0_31642.7","cluster":1,"lon":103.853927,"lat":1.307887,"area_sqm":21.3},
+    {"plot_id":"30341.5_31610.4","cluster":1,"lon":103.853948,"lat":1.307755,"area_sqm":142.9},
+    {"plot_id":"30342.3_31610.1","cluster":1,"lon":103.853955,"lat":1.307752,"area_sqm":115.3},
+    {"plot_id":"30347.0_31613.7","cluster":1,"lon":103.853998,"lat":1.307785,"area_sqm":38.6},
+    {"plot_id":"30356.0_31653.4","cluster":1,"lon":103.854082,"lat":1.307984,"area_sqm":105.2},
+    {"plot_id":"30356.5_31648.6","cluster":1,"lon":103.854086,"lat":1.307941,"area_sqm":49.2},
+    {"plot_id":"30357.4_31648.3","cluster":1,"lon":103.854094,"lat":1.307938,"area_sqm":73.0},
+    {"plot_id":"30357.8_31646.7","cluster":1,"lon":103.854098,"lat":1.307924,"area_sqm":58.7},
+    {"plot_id":"30359.5_31646.4","cluster":1,"lon":103.854113,"lat":1.307921,"area_sqm":114.3},
+    {"plot_id":"30362.8_31645.4","cluster":1,"lon":103.854143,"lat":1.307912,"area_sqm":29.2},
+    {"plot_id":"30364.2_31645.5","cluster":1,"lon":103.854155,"lat":1.307912,"area_sqm":30.5},
+    {"plot_id":"30368.1_31645.7","cluster":1,"lon":103.85419,"lat":1.307914,"area_sqm":109.4},
+    {"plot_id":"30368.9_31646.3","cluster":1,"lon":103.854197,"lat":1.30792,"area_sqm":24.6},
+    {"plot_id":"30370.0_31638.8","cluster":1,"lon":103.854205,"lat":1.307852,"area_sqm":100.5},
+    {"plot_id":"30372.0_31627.4","cluster":1,"lon":103.854222,"lat":1.307749,"area_sqm":1.7},
+    {"plot_id":"30372.9_31615.8","cluster":1,"lon":103.85423,"lat":1.307645,"area_sqm":129.1},
+    {"plot_id":"30373.6_31622.2","cluster":1,"lon":103.854237,"lat":1.307702,"area_sqm":27.1},
+    {"plot_id":"30374.0_31614.6","cluster":1,"lon":103.854239,"lat":1.307633,"area_sqm":9.1},
+    {"plot_id":"30374.8_31620.4","cluster":1,"lon":103.854247,"lat":1.307686,"area_sqm":113.1},
+    {"plot_id":"30375.5_31614.2","cluster":1,"lon":103.854253,"lat":1.30763,"area_sqm":16.7},
+    {"plot_id":"30380.8_31608.8","cluster":1,"lon":103.8543,"lat":1.307581,"area_sqm":335.6},
+    {"plot_id":"30382.0_31606.5","cluster":1,"lon":103.854311,"lat":1.30756,"area_sqm":31.1},
+    {"plot_id":"30386.3_31510.5","cluster":1,"lon":103.854331,"lat":1.307054,"area_sqm":105.8},
+    {"plot_id":"30388.1_31519.6","cluster":1,"lon":103.854351,"lat":1.307136,"area_sqm":8.6},
+    {"plot_id":"30389.7_31516.8","cluster":1,"lon":103.854365,"lat":1.307111,"area_sqm":37.1},
+    {"plot_id":"30390.8_31520.2","cluster":1,"lon":103.854376,"lat":1.307141,"area_sqm":54.2},
+    {"plot_id":"30393.0_31517.9","cluster":1,"lon":103.854395,"lat":1.307121,"area_sqm":108.8},
+    {"plot_id":"30395.0_31499.4","cluster":1,"lon":103.854409,"lat":1.306953,"area_sqm":331.4},
+    {"plot_id":"30395.3_31518.6","cluster":1,"lon":103.854416,"lat":1.307127,"area_sqm":268.0},
+    {"plot_id":"30396.3_31509.1","cluster":1,"lon":103.854423,"lat":1.307041,"area_sqm":5.7},
+    {"plot_id":"30397.8_31507.3","cluster":1,"lon":103.854436,"lat":1.307024,"area_sqm":51.5},
+    {"plot_id":"30398.7_31506.8","cluster":1,"lon":103.854444,"lat":1.30702,"area_sqm":38.2},
+    {"plot_id":"30403.4_32454.8","cluster":1,"lon":103.854916,"lat":1.309789,"area_sqm":269.5},
+    {"plot_id":"30405.0_32454.6","cluster":1,"lon":103.85493,"lat":1.309788,"area_sqm":56.0},
+    {"plot_id":"30410.2_32457.5","cluster":1,"lon":103.854976,"lat":1.309814,"area_sqm":87.6},
+    {"plot_id":"30437.7_32402.4","cluster":1,"lon":103.855221,"lat":1.309314,"area_sqm":89.3},
+    {"plot_id":"30437.7_32399.4","cluster":1,"lon":103.855221,"lat":1.309287,"area_sqm":555.8},
+    {"plot_id":"30438.5_32398.5","cluster":1,"lon":103.855228,"lat":1.309279,"area_sqm":49.5},
+    {"plot_id":"30440.5_32398.2","cluster":1,"lon":103.855246,"lat":1.309276,"area_sqm":28.9},
+    {"plot_id":"30440.7_32399.2","cluster":1,"lon":103.855248,"lat":1.309285,"area_sqm":36.3},
+    {"plot_id":"30448.7_32392.7","cluster":1,"lon":103.855318,"lat":1.309226,"area_sqm":57.8},
+    {"plot_id":"30448.8_32393.9","cluster":1,"lon":103.855319,"lat":1.309237,"area_sqm":159.3},
+    {"plot_id":"30449.1_32402.4","cluster":1,"lon":103.855323,"lat":1.309316,"area_sqm":34.1},
+    {"plot_id":"30449.6_32395.9","cluster":1,"lon":103.855326,"lat":1.309254,"area_sqm":254.0},
+    {"plot_id":"30122.2_29712.3","cluster":1,"lon":103.850782,"lat":1.302718,"area_sqm":212.7},
+    {"plot_id":"30197.3_32529.1","cluster":1,"lon":103.85306,"lat":1.31046,"area_sqm":40.6},
+    {"plot_id":"30199.3_32530.0","cluster":1,"lon":103.853078,"lat":1.310468,"area_sqm":37.2},
+    {"plot_id":"30200.6_32549.9","cluster":1,"lon":103.853091,"lat":1.310645,"area_sqm":41.6},
+    {"plot_id":"30200.5_32549.9","cluster":1,"lon":103.85309,"lat":1.310645,"area_sqm":65.2},
+    {"plot_id":"30178.3_32531.2","cluster":1,"lon":103.852892,"lat":1.310475,"area_sqm":44.4},
+    {"plot_id":"30178.2_32531.2","cluster":1,"lon":103.852891,"lat":1.310475,"area_sqm":15.3},
+    {"plot_id":"29246.3_29125.5","cluster":2,"lon":103.849874,"lat":1.303167,"area_sqm":426.5},
+    {"plot_id":"29798.0_29276.6","cluster":2,"lon":103.847347,"lat":1.304579,"area_sqm":165.9},
+    {"plot_id":"29798.0_29278.6","cluster":2,"lon":103.847347,"lat":1.304597,"area_sqm":1529.3},
+    {"plot_id":"29838.3_29321.5","cluster":2,"lon":103.847726,"lat":1.304996,"area_sqm":868.9},
+    {"plot_id":"29840.2_32326.4","cluster":2,"lon":103.84989,"lat":1.308615,"area_sqm":808.3},
+    {"plot_id":"29842.4_32324.2","cluster":2,"lon":103.849906,"lat":1.308595,"area_sqm":181.4},
+    {"plot_id":"29844.4_32326.3","cluster":2,"lon":103.849926,"lat":1.308614,"area_sqm":213.2},
+    {"plot_id":"29851.6_32267.3","cluster":2,"lon":103.849986,"lat":1.308078,"area_sqm":592.4},
+    {"plot_id":"30088.6_29487.8","cluster":2,"lon":103.849988,"lat":1.304526,"area_sqm":803.4},
+    {"plot_id":"30095.4_29526.4","cluster":2,"lon":103.85006,"lat":1.304878,"area_sqm":280.8},
+    {"plot_id":"30096.2_32309.6","cluster":2,"lon":103.851277,"lat":1.308469,"area_sqm":567.7},
+    {"plot_id":"30096.8_32310.8","cluster":2,"lon":103.851284,"lat":1.30848,"area_sqm":592.5},
+    {"plot_id":"30099.1_32283.4","cluster":2,"lon":103.851301,"lat":1.308232,"area_sqm":326.8},
+    {"plot_id":"30138.1_32404.8","cluster":2,"lon":103.851694,"lat":1.309332,"area_sqm":611.0},
+    {"plot_id":"30149.5_32375.5","cluster":2,"lon":103.851793,"lat":1.309064,"area_sqm":731.2},
+    {"plot_id":"30152.3_30719.2","cluster":2,"lon":103.851467,"lat":1.306347,"area_sqm":520.0},
+    {"plot_id":"30156.4_30698.7","cluster":2,"lon":103.851501,"lat":1.306161,"area_sqm":503.0},
+    {"plot_id":"30243.1_32133.0","cluster":2,"lon":103.853377,"lat":1.306921,"area_sqm":1306.2},
+    {"plot_id":"30248.2_32021.6","cluster":2,"lon":103.853519,"lat":1.305867,"area_sqm":300.4},
+    {"plot_id":"30248.2_32023.2","cluster":2,"lon":103.853519,"lat":1.305881,"area_sqm":1020.7},
+    {"plot_id":"30250.1_32022.5","cluster":2,"lon":103.853537,"lat":1.305875,"area_sqm":167.4},
+    {"plot_id":"30250.5_32020.8","cluster":2,"lon":103.85354,"lat":1.305859,"area_sqm":559.1},
+    {"plot_id":"30276.1_32070.9","cluster":2,"lon":103.853765,"lat":1.306312,"area_sqm":219.7},
+    {"plot_id":"30277.9_32070.4","cluster":2,"lon":103.85378,"lat":1.306307,"area_sqm":98.3},
+    {"plot_id":"30277.2_32070.7","cluster":2,"lon":103.853774,"lat":1.30631,"area_sqm":2437.6},
+    {"plot_id":"30292.9_32057.0","cluster":2,"lon":103.853915,"lat":1.306186,"area_sqm":5421.1},
+    {"plot_id":"30294.0_32059.0","cluster":2,"lon":103.853925,"lat":1.306214,"area_sqm":636.1},
+    {"plot_id":"30307.2_32081.2","cluster":2,"lon":103.854047,"lat":1.306409,"area_sqm":1756.1},
+    {"plot_id":"30307.7_32023.7","cluster":2,"lon":103.854044,"lat":1.305887,"area_sqm":1776.1},
+    {"plot_id":"30357.5_32264.4","cluster":2,"lon":103.854474,"lat":1.308061,"area_sqm":1132.7},
+    {"plot_id":"30378.0_32101.8","cluster":2,"lon":103.854656,"lat":1.306594,"area_sqm":1032.3},
+    {"plot_id":"30385.0_32109.8","cluster":2,"lon":103.854721,"lat":1.306666,"area_sqm":1328.0},
+    {"plot_id":"30415.0_32417.0","cluster":2,"lon":103.855011,"lat":1.309439,"area_sqm":1838.2},
+    {"plot_id":"41359.9_38294.8","cluster":2,"lon":103.855307,"lat":1.314551,"area_sqm":2027.6},
+    {"plot_id":"30127.7_32475.1","cluster":3,"lon":103.852439,"lat":1.309965,"area_sqm":2459.3},
+    {"plot_id":"30130.4_32563.6","cluster":3,"lon":103.852466,"lat":1.310764,"area_sqm":2576.9},
+    {"plot_id":"30134.7_32538.0","cluster":3,"lon":103.852503,"lat":1.310531,"area_sqm":2751.5},
+    {"plot_id":"30136.6_32547.9","cluster":3,"lon":103.852522,"lat":1.310621,"area_sqm":1269.6},
+    {"plot_id":"30139.0_32524.7","cluster":3,"lon":103.852541,"lat":1.310411,"area_sqm":1118.0},
+    {"plot_id":"30141.1_32550.7","cluster":3,"lon":103.852563,"lat":1.310646,"area_sqm":1952.7},
+    {"plot_id":"30166.8_32585.4","cluster":3,"lon":103.85279,"lat":1.310965,"area_sqm":1150.5},
+    {"plot_id":"30167.3_32584.1","cluster":3,"lon":103.852795,"lat":1.310954,"area_sqm":1166.3},
+    {"plot_id":"30167.7_32582.9","cluster":3,"lon":103.852798,"lat":1.310943,"area_sqm":1891.2},
+    {"plot_id":"30176.5_32578.5","cluster":3,"lon":103.852876,"lat":1.310903,"area_sqm":1946.4},
+    {"plot_id":"30191.6_32518.2","cluster":3,"lon":103.85301,"lat":1.310358,"area_sqm":2321.5},
+    {"plot_id":"30204.2_32521.4","cluster":3,"lon":103.853121,"lat":1.310388,"area_sqm":730.1},
+    {"plot_id":"30220.1_32520.2","cluster":3,"lon":103.853263,"lat":1.310377,"area_sqm":718.5},
+    {"plot_id":"30221.4_32532.4","cluster":3,"lon":103.853276,"lat":1.310487,"area_sqm":2078.5},
+    {"plot_id":"30232.9_32527.1","cluster":3,"lon":103.853377,"lat":1.310439,"area_sqm":1072.1},
+    {"plot_id":"30275.6_32498.6","cluster":3,"lon":103.853759,"lat":1.310177,"area_sqm":2097.5},
+    {"plot_id":"30276.5_32500.8","cluster":3,"lon":103.853767,"lat":1.310197,"area_sqm":625.7},
+    {"plot_id":"30283.5_32494.6","cluster":3,"lon":103.853828,"lat":1.310141,"area_sqm":521.0},
+    {"plot_id":"30298.9_32460.2","cluster":3,"lon":103.853963,"lat":1.309829,"area_sqm":2527.1},
+    {"plot_id":"30301.5_32449.1","cluster":3,"lon":103.853985,"lat":1.309728,"area_sqm":3532.5},
+    {"plot_id":"30369.1_32438.1","cluster":3,"lon":103.854605,"lat":1.309631,"area_sqm":2205.6},
+    {"plot_id":"30372.0_32450.9","cluster":3,"lon":103.854635,"lat":1.309747,"area_sqm":1841.8},
+    {"plot_id":"30373.8_32453.0","cluster":3,"lon":103.854651,"lat":1.309766,"area_sqm":1184.2},
+    {"plot_id":"30380.5_32455.8","cluster":3,"lon":103.854711,"lat":1.309792,"area_sqm":2889.4},
+    {"plot_id":"30383.0_32443.8","cluster":3,"lon":103.854731,"lat":1.309685,"area_sqm":1453.1},
+    {"plot_id":"30382.7_32449.6","cluster":3,"lon":103.854729,"lat":1.309737,"area_sqm":1642.5},
+    {"plot_id":"30390.1_32430.2","cluster":3,"lon":103.854794,"lat":1.309562,"area_sqm":1851.8},
+    {"plot_id":"30390.7_32436.6","cluster":3,"lon":103.8548,"lat":1.309619,"area_sqm":1782.3},
+    {"plot_id":"30401.6_32454.6","cluster":3,"lon":103.8549,"lat":1.309782,"area_sqm":2521.1},
+    {"plot_id":"30404.0_32453.3","cluster":3,"lon":103.854921,"lat":1.30977,"area_sqm":1136.6},
+    {"plot_id":"30407.0_32467.9","cluster":3,"lon":103.854953,"lat":1.309903,"area_sqm":5797.6},
+    {"plot_id":"30418.9_32399.5","cluster":3,"lon":103.855051,"lat":1.309285,"area_sqm":2621.3},
+    {"plot_id":"30428.4_32400.6","cluster":3,"lon":103.855136,"lat":1.309295,"area_sqm":997.2},
+    {"plot_id":"30435.2_32417.4","cluster":3,"lon":103.855198,"lat":1.309447,"area_sqm":973.4},
+    {"plot_id":"30121.0_29710.8","cluster":4,"lon":103.850764,"lat":1.3027,"area_sqm":1337.6},
+    {"plot_id":"30158.4_30707.3","cluster":4,"lon":103.851521,"lat":1.306238,"area_sqm":3007.4},
+    {"plot_id":"30215.6_32570.4","cluster":4,"lon":103.853226,"lat":1.31083,"area_sqm":609.6},
+    {"plot_id":"30254.3_32519.6","cluster":4,"lon":103.853565,"lat":1.310367,"area_sqm":180.2},
+    {"plot_id":"30293.6_31644.4","cluster":4,"lon":103.853513,"lat":1.307863,"area_sqm":33.0},
+    {"plot_id":"30300.3_32282.8","cluster":4,"lon":103.853985,"lat":1.308225,"area_sqm":337.8},
+    {"plot_id":"30301.7_32294.4","cluster":4,"lon":103.854001,"lat":1.30833,"area_sqm":1076.3},
+    {"plot_id":"30305.8_31619.1","cluster":4,"lon":103.85362,"lat":1.307634,"area_sqm":478.3},
+    {"plot_id":"30312.9_32293.7","cluster":4,"lon":103.854101,"lat":1.308324,"area_sqm":1212.3},
+    {"plot_id":"30345.5_31632.1","cluster":4,"lon":103.853985,"lat":1.307753,"area_sqm":2056.9},
+    {"plot_id":"30355.5_32284.1","cluster":4,"lon":103.854481,"lat":1.308241,"area_sqm":578.2},
+    {"plot_id":"30366.6_32297.9","cluster":4,"lon":103.854583,"lat":1.308365,"area_sqm":387.9},
+    {"plot_id":"30366.5_32297.9","cluster":4,"lon":103.854582,"lat":1.308365,"area_sqm":271.5},
+    {"plot_id":"30366.7_32299.1","cluster":4,"lon":103.854584,"lat":1.308376,"area_sqm":205.3},
+    {"plot_id":"30394.6_32475.2","cluster":4,"lon":103.854849,"lat":1.30997,"area_sqm":2314.0},
+    {"plot_id":"30395.9_32460.9","cluster":4,"lon":103.854858,"lat":1.309842,"area_sqm":771.9}
+  ];
+}
+
+// Start
+init();
+</script>
+
+</body>
+</html>
